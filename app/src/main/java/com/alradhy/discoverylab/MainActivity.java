@@ -1,6 +1,7 @@
 package com.alradhy.discoverylab;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.graphics.Canvas;
@@ -195,7 +196,7 @@ public final class MainActivity extends Activity {
         addText("اكتشف كيف قاس الإنسان سرعة الضوء", 34, TEXT, true, 16);
         addText("حكاية سينمائية قصيرة، ثم مختبر تفاعلي حقيقي — مصمم للريموت والماوس ويعمل دون إنترنت.",
                 21, MUTED, false, 26);
-        addCard("ثلاث تجارب علمية مختلفة فعلًا",
+        addCard("15 مختبرًا علميًا متميزًا",
                 "غاليليو: قِس زمن الاستجابة البشرية بالفوانيس. رومر: غيّر مسافة الأرض عن المشتري وتتبّع تأخر خسوف آيو. فيزو: غيّر سرعة العجلة والمسافة وشاهد إطفاء الشعاع. كل مختبر له مشهد وحسابات وتحكم مختلف.");
         rowButtons(new String[]{"ابدأ رحلة الاكتشاف", "ادخل مختبر فيزو"}, new Runnable[]{
             () -> {page=1;chapter=0;render();},
@@ -206,6 +207,7 @@ public final class MainActivity extends Activity {
             () -> {page=4;render();},
             () -> {page=2;render();}
         });
+        addButton("🔬 استكشف 15 مختبرًا تفاعليًا", () -> startActivity(new Intent(this, ScienceLabsActivity.class)));
         addText("تنقل بالأسهم، واضغط OK للاختيار. استخدم الماوس للنقر أو التمرير.",
                 16, MUTED, false, 0);
     }
@@ -277,6 +279,7 @@ public final class MainActivity extends Activity {
             () -> {galileoFired=false;galileoDistanceMeters=1000;observerReactionMs=250;updateGalileo();},
             () -> {page=1;chapter=1;render();}
         });
+        addText("🎯 تحدي المختبر: زد المسافة إلى 10 كم وخفّض زمن الاستجابة إلى 50 ms؛ هل يكفي لقياس سرعة الضوء؟", 17, GOLD, true, 8);
         addText("سؤال التجربة: هل يمكن فصل تأخر الضوء، الذي يُقاس بالميكروثواني، عن استجابة الإنسان التي تُقاس بالميلي ثانية؟ جرّب أكثر من مسافة.", 16, MUTED, false, 0);
     }
     private void changeGalileoDistance(int delta) {
@@ -292,7 +295,9 @@ public final class MainActivity extends Activity {
             String third = galileoFired ?
                 "قراءة التجربة التقريبية: "+String.format(Locale.US,"%.4f",observerReactionMs+galileoMicroseconds()/1000.0)+" ملّي ثانية\nالنتيجة: التأخر البشري يغطي تقريبًا تأخر الضوء." :
                 "اضغط «أشعل الفانوس» ثم قارن بين زمن الضوء وزمن استجابة الإنسان.";
-            readout.setText(first+"\n"+second+"\n"+third);
+            String ratio="زمن الاستجابة أطول من زمن الضوء بنحو "+
+                String.format(Locale.US,"%.0f",observerReactionMs*1000.0/galileoMicroseconds())+" مرة.";
+            readout.setText(first+"\n"+second+"\n"+ratio+"\n"+third);
         }
         if (galileoView != null) galileoView.invalidate();
     }
@@ -330,6 +335,7 @@ public final class MainActivity extends Activity {
             () -> {romerEarthPosition=0;romerObserved=false;updateRoemer();},
             () -> {page=1;chapter=2;render();}
         });
+        addText("🎯 تحدي المختبر: قارن أقرب موضع بأبعد موضع، ثم استنتج لماذا كان آيو ساعة طبيعية مفيدة.", 17, GOLD, true, 8);
         addText("استخدم رومر تراكم اختلافات مواعيد خسوف آيو عبر مدارات متعددة لاستنتاج أن سرعة الضوء محدودة. استخدم النموذج فرق مسافة أقصاه وحدتان فلكيتان للتوضيح.", 16, MUTED, false, 0);
     }
     private void changeEarthPosition(int delta) {
@@ -457,6 +463,7 @@ public final class MainActivity extends Activity {
         rowButtons(new String[]{"اذهب إلى أول انطفاء", "العودة إلى القصة"},
             new Runnable[]{()->{rpm=(int)Math.round(firstExtinctionRpm());updateReadout();},
                             ()->{page=1;chapter=3;render();}});
+        addText("🎯 تحدي المختبر: غيّر المسافة ولاحظ كيف تتغير سرعة العجلة المطلوبة لأول انطفاء.", 17, GOLD, true, 8);
         addText("على رسم التجربة: يمين/يسار ±10، أعلى/أسفل ±100 دورة/دقيقة. "
                 +"النتيجة محاكاة مثالية مبسطة، لا قياس فعلي أو إعادة بناء كاملة للجهاز التاريخي.",
                 15,MUTED,false,0);
