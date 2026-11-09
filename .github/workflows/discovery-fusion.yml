@@ -1,9 +1,9 @@
-name: Build ALRADHY Discovery Fusion ChatGPT APK
+name: Build ALRADHY Discovery 15 Labs APK
 
 on:
   push:
     branches:
-      - feature/discovery-fusion-chatgpt-v01
+      - feature/discovery-15-interactive-labs
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,7 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
-      - name: Checkout Fusion branch
+      - name: Checkout 15-labs branch
         uses: actions/checkout@v4
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -36,27 +36,27 @@ jobs:
           mkdir -p "$HOME/gradle"
           unzip -q gradle.zip -d "$HOME/gradle"
           echo "$HOME/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
-      - name: Build Fusion Android TV APK
+      - name: Build 15 Labs Android TV APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
       - name: Verify and checksum APK
         shell: bash
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Interactive.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-15-Labs.apk
           test -s ALRADHY-Discovery-Interactive.apk
           sha256sum ALRADHY-Discovery-Interactive.apk
       - name: Upload Fusion artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Interactive-APK
+          name: ALRADHY-Discovery-15-Labs-APK
           path: ALRADHY-Discovery-Interactive.apk
       - name: Publish Fusion preview prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "discovery-interactive-v0.3.${{ github.run_number }}" ALRADHY-Discovery-Interactive.apk \
+          gh release create "discovery-15-labs-v0.4.${{ github.run_number }}" ALRADHY-Discovery-Interactive.apk \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Interactive - Galileo Roemer Fizeau" \
-            --notes "Native separate Galileo lantern timing, Roemer Io eclipse delay and Fizeau rotating wheel experiments with distance adjustment. Includes 50 history/cosmic information stations, quizzes and audio. App ID: com.alradhy.discoveryinteractive (separate install protects older installations). Debug signed, device testing pending." \
+            --title "ALRADHY Discovery 15 Labs - Interactive Science Universe" \
+            --notes "Fifteen differentiated interactive physics models: Galileo, Roemer, Fizeau plus twelve distinct labs (prism, Foucault, Coulomb, orbit, double slit, buoyancy, Faraday, Ohm, Kepler, Doppler, pendulum, photoelectric effect); 50 stations, offline educational models. New app ID preserves old installations. Debug signed, device test pending." \
             --prerelease
