@@ -3,6 +3,7 @@ package com.alradhy.discovery
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
 import android.graphics.*
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioManager
@@ -36,7 +37,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private var ttsReady = false
     private var toneGen: ToneGenerator? = null
 
-    private var currentCategory = 0 // 0 = Time Machine (25), 1 = Cosmic Scale (25) -> Total 50
+    private val progress by lazy { getSharedPreferences("discovery_fusion_progress", Context.MODE_PRIVATE) }
+    private var currentCategory = 0 // 25 history + 25 cosmic stations
     private var currentIndex = 0
     private var simSpeed = 1.0f
     private var energyBoost = 1.0f
@@ -211,7 +213,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         ),
         DiscoveryItem(
             "[ 1905 م ]", "ألبرت أينشتاين والنسبية والكم", "زمكان الجاذبية ومعادلة تكافؤ الطاقة والكتلة", "النطاق: برن وبرلين",
-            "قدم أينشتاين تفسير الظاهرة الكهروضوئية (الفوتونات) والنظرية النسبية الخاصة والعامة؛ مبيناً أن المادة والطاقة وجهان لعملة واحدة ($E=mc^2$)، وأن الجاذبية هي انحناء في نسيج الزمان والمكان.",
+            "قدم أينشتاين تفسير الظاهرة الكهروضوئية (الفوتونات) والنظرية النسبية الخاصة والعامة؛ مبيناً أن المادة والطاقة وجهان لعملة واحدة (E=mc²)، وأن الجاذبية هي انحناء في نسيج الزمان والمكان.",
             listOf("1. تعتمد أقمار تحديد المواقع (GPS) يومياً على معادلات النسبية لتصحيح التوقيت الذري.", "2. إثبات أن سرعة الضوء في الفراغ ثابتة لا تتغير بحركة المصدر أو الراصد.", "3. التنبؤ بوجود موجات الجاذبية وانحراف ضوء النجوم قرب الأجرام الضخمة."),
             "لماذا تحتاج أقمار الـ GPS الصناعية إلى معادلات أينشتاين النسبية؟",
             listOf("1. لتصحيح فارق الوقت الناتج عن سرعتها وضعف الجاذبية في المدار", "2. لتبريد البطاريات", "3. لتغيير لون الشاشة"), 0, 22
@@ -421,7 +423,10 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         } catch (_: Exception) {}
 
         buildDashboardUI()
-        selectCategory(0)
+        val savedCategory = progress.getInt("category", 0).coerceIn(0, 1)
+        val savedStation = progress.getInt("station", 0).coerceIn(0, 24)
+        selectCategory(savedCategory)
+        selectStation(savedStation)
     }
 
     override fun onInit(status: Int) {
@@ -530,6 +535,20 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+
+        val discoveryLabButton = TextView(this).apply {
+            text = "🔬 مختبر الضوء"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            styleInteractiveButton(this, "#16402F", "#46C8A0")
+            setOnClickListener {
+                playClickSound(ToneGenerator.TONE_PROP_ACK)
+                startActivity(Intent(this@MainActivity, com.alradhy.discoverylab.MainActivity::class.java))
+            }
+        }
+        headerRow.addView(discoveryLabButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         tabTimeBtn = TextView(this).apply {
             text = "🌍 آلة الزمن (25)"
@@ -790,6 +809,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun selectCategory(cat: Int) {
         currentCategory = cat
         currentIndex = 0
+        progress.edit().putInt("category", cat).putInt("station", 0).apply()
 
         if (cat == 0) {
             tabTimeBtn.setTextColor(Color.parseColor("#FFD54F"))
@@ -828,6 +848,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val list = getCurrentList()
         if (index !in list.indices) return
         currentIndex = index
+        progress.edit().putInt("category", currentCategory).putInt("station", index).apply()
         val item = list[index]
         val globalNumber = if (currentCategory == 0) (index + 1) else (index + 26)
 
@@ -910,7 +931,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private fun showQuizDialog() {
         val item = getCurrentList()[currentIndex]
         val builder = AlertDialog.Builder(this)
-        builder.setTitle("🧠 تحدي المعرفة: ${item.title}")
+        builder.setTitle("🧠 ${item.quizQuestion}")
         val optionsArray = item.quizOptions.toTypedArray()
         builder.setItems(optionsArray) { dialog, which ->
             if (which == item.correctIndex) {

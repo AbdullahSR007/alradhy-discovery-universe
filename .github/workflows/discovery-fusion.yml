@@ -1,0 +1,62 @@
+name: Build ALRADHY Discovery Fusion ChatGPT APK
+
+on:
+  push:
+    branches:
+      - feature/discovery-fusion-chatgpt-v01
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Fusion branch
+        uses: actions/checkout@v4
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install SDK and Gradle 8.7
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/android-sdk/cmdline-tools"
+          curl -fLsS https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdtools.zip
+          unzip -q cmdtools.zip -d "$HOME/android-sdk/cmdline-tools"
+          mv "$HOME/android-sdk/cmdline-tools/cmdline-tools" "$HOME/android-sdk/cmdline-tools/latest"
+          yes | "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
+          curl -fLsS https://services.gradle.org/distributions/gradle-8.7-bin.zip -o gradle.zip
+          mkdir -p "$HOME/gradle"
+          unzip -q gradle.zip -d "$HOME/gradle"
+          echo "$HOME/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
+      - name: Build Fusion Android TV APK
+        run: gradle :app:assembleDebug --stacktrace --no-daemon
+      - name: Verify and checksum APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Fusion-ChatGPT.apk
+          test -s ALRADHY-Discovery-Fusion-ChatGPT.apk
+          sha256sum ALRADHY-Discovery-Fusion-ChatGPT.apk
+      - name: Upload Fusion artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ALRADHY-Discovery-Fusion-ChatGPT-APK
+          path: ALRADHY-Discovery-Fusion-ChatGPT.apk
+      - name: Publish Fusion preview prerelease
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "fusion-chatgpt-v0.2.${{ github.run_number }}" ALRADHY-Discovery-Fusion-ChatGPT.apk \
+            --target "$GITHUB_SHA" \
+            --title "ALRADHY Discovery Fusion ChatGPT - 50 stations and Fizeau Lab" \
+            --notes "Preview APK: 25 history stations, 25 cosmic scale stations, integrated five-scene Fizeau lab, quiz title fix, progress restore, unique launcher icon. App ID: com.alradhy.discoveryfusion. Debug-signed test APK; updates across cloud runs may require reinstall until persistent secure signing is configured. Existing Gemini/ChatGPT apps are untouched." \
+            --prerelease
