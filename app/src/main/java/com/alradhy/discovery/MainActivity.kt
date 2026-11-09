@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.KeyEvent
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.graphics.Color
 
@@ -13,7 +14,7 @@ class MainActivity : Activity() {
     private lateinit var titleView: TextView
     private lateinit var descView: TextView
     private lateinit var counterView: TextView
-    private lateinit var indicatorView: TextView
+    private lateinit var stationsContainer: LinearLayout
 
     private data class Station(val id: Int, val category: String, val title: String, val description: String)
 
@@ -76,41 +77,76 @@ class MainActivity : Activity() {
         val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(Color.parseColor("#07090E"))
-            setPadding(80, 60, 80, 60)
-            gravity = Gravity.CENTER_VERTICAL
+            setPadding(60, 40, 60, 40)
         }
 
         counterView = TextView(this).apply {
-            textSize = 16f
+            textSize = 15f
             setTextColor(Color.parseColor("#38BDF8"))
-            setPadding(0, 0, 0, 20)
+            setPadding(0, 0, 0, 10)
         }
         rootLayout.addView(counterView)
 
         titleView = TextView(this).apply {
-            textSize = 32f
+            textSize = 26f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, 30)
+            setPadding(0, 0, 0, 15)
         }
         rootLayout.addView(titleView)
 
         descView = TextView(this).apply {
-            textSize = 20f
+            textSize = 16f
             setTextColor(Color.parseColor("#94A3B8"))
-            setPadding(0, 0, 0, 50)
+            setPadding(0, 0, 0, 25)
         }
         rootLayout.addView(descView)
 
-        indicatorView = TextView(this).apply {
-            text = "◀ استعمل أزرار اليمين واليسار في الريموت للتنقل بين المحطات (50 / 1) ▶"
-            textSize = 14f
-            setTextColor(Color.parseColor("#64748B"))
+        // حاوية قائمة محطات قابلة للنقر بالماوس والتمرير بالريموت أو الماوس
+        val scrollView = ScrollView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
         }
-        rootLayout.addView(indicatorView)
+
+        stationsContainer = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        scrollView.addView(stationsContainer)
+        rootLayout.addView(scrollView)
 
         setContentView(rootLayout)
+        buildStationsList()
         updateUI()
+    }
+
+    private fun buildStationsList() {
+        stationsContainer.removeAllViews()
+        for ((index, s) in stations.withIndex()) {
+            val tv = TextView(this).apply {
+                text = "[ ${s.category} ] ${s.title}"
+                textSize = 15f
+                setPadding(20, 16, 20, 16)
+                isFocusable = true
+                isFocusableInTouchMode = true
+                
+                // دعم النقر بالماوس أو اللمس
+                setOnClickListener {
+                    currentIndex = index
+                    updateUI()
+                }
+                
+                // دعم التركيز بالريموت
+                setOnFocusChangeListener { _, hasFocus ->
+                    if (hasFocus) {
+                        currentIndex = index
+                        updateUI()
+                    }
+                }
+            }
+            stationsContainer.addView(tv)
+        }
     }
 
     private fun updateUI() {
@@ -118,18 +154,29 @@ class MainActivity : Activity() {
         counterView.text = "SECTION: ${s.category.uppercase()}  |  STATION ${s.id} OF 50"
         titleView.text = s.title
         descView.text = s.description
+
+        for (i in 0 until stationsContainer.childCount) {
+            val child = stationsContainer.getChildAt(i) as TextView
+            if (i == currentIndex) {
+                child.setBackgroundColor(Color.parseColor("#1E293B"))
+                child.setTextColor(Color.parseColor("#38BDF8"))
+            } else {
+                child.setBackgroundColor(Color.TRANSPARENT)
+                child.setTextColor(Color.WHITE)
+            }
+        }
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> {
+            KeyEvent.KEYCODE_DPAD_DOWN -> {
                 if (currentIndex < stations.size - 1) {
                     currentIndex++
                     updateUI()
                 }
                 return true
             }
-            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
+            KeyEvent.KEYCODE_DPAD_UP -> {
                 if (currentIndex > 0) {
                     currentIndex--
                     updateUI()
