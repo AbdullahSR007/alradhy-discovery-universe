@@ -8,9 +8,14 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:banner="@drawable/ic_banner"
-        android:label="ALRADHY Discovery Interactive"
+        android:label="ALRADHY Discovery 15 Labs"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+
+        <activity
+            android:name="com.alradhy.discoverylab.ScienceLabsActivity"
+            android:exported="false"
+            android:screenOrientation="landscape" />
 
         <activity
             android:name="com.alradhy.discoverylab.MainActivity"
