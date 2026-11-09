@@ -2,6 +2,8 @@ package com.alradhy.discoverylab;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.view.MotionEvent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -85,7 +87,67 @@ public final class ScienceLabsActivity extends Activity {
     private static final double[] B_MAX={3,24,2,12,1,1500,4,500,.7,120,20,4};
     private static final int[] A_INIT={50,72,70,25,35,50,50,50,30,50,40,40};
     private static final int[] B_INIT={40,25,45,40,40,50,40,20,25,50,48,40};
+
+    private static final String[] HISTORY = {
+        "1666: استخدم نيوتن منشورًا لتوضيح أن الضوء الأبيض يحمل ألوانًا مختلفة.",
+        "1851: عرض فوكو بندولًا طويلًا في باريس لإظهار دوران الأرض.",
+        "1785: استخدم شارل كولوم ميزان الالتواء لدراسة القوى بين الشحنات.",
+        "1687: تخيّل نيوتن إطلاق مقذوف بسرعة تجعل الأرض تنحني تحته باستمرار.",
+        "1801: وضّح توماس يونغ التداخل في تجارب الشقين لبحث الطبيعة الموجية للضوء.",
+        "القرن الثالث ق.م: شرح أرخميدس قوة الطفو الناتجة من السائل المزاح.",
+        "1831: اكتشف فاراداي الحث الكهرومغناطيسي عند تغيّر الفيض المغناطيسي.",
+        "1827: صاغ أوم علاقة بين فرق الجهد والتيار والمقاومة.",
+        "1609–1619: استنتج كبلر قوانين حركة الكواكب من أرصاد دقيقة.",
+        "1842: وصف كريستيان دوبلر تغير التردد بسبب الحركة النسبية.",
+        "القرن السابع عشر: درس غاليليو علاقة طول البندول وزمن تأرجحه.",
+        "1905: فسّر أينشتاين التأثير الكهروضوئي بكمّات من الضوء."
+    };
+    private static final String[] APPLICATIONS = {
+        "اليوم: المبددات الطيفية، المطياف، تحليل الضوء في المختبرات والاتصالات البصرية.",
+        "اليوم: أنظمة مرجعية للحركة ودروس في فيزياء الأرض وأجهزة قياس دقيقة.",
+        "اليوم: تصميم الحساسات الكهروستاتيكية وفهم سلوك الشحنات في الأجهزة.",
+        "اليوم: حساب مدارات الأقمار الصناعية ومهام الفضاء.",
+        "اليوم: المقاييس التداخلية والقياسات البصرية عالية الدقة.",
+        "اليوم: قياس الكثافة، تصميم السفن والغواصات.",
+        "اليوم: المولدات والمحولات وأنظمة استشعار المجال.",
+        "اليوم: تصميم الدوائر الكهربائية وحماية الإلكترونيات.",
+        "اليوم: تخطيط مدارات الأقمار والمركبات الفضائية.",
+        "اليوم: الرادار والسرعة النسبية والقياسات الطبية بالموجات فوق الصوتية.",
+        "اليوم: الساعات الميكانيكية وحساسات الاهتزاز والتجارب التعليمية.",
+        "اليوم: الكواشف الضوئية والخلايا الشمسية وحساسات الكاميرات."
+    };
+    private static final String[] INSIGHT = {
+        "يرتبط معامل انكسار الزجاج بالطول الموجي؛ لذلك ينحرف الأزرق والأحمر بزاويتين مختلفتين.",
+        "معدل دوران مستوى تأرجح بندول فوكو يتناسب مع جيب خط العرض. عند خط الاستواء لا يدور بالنسبة إلى الأرض بهذا النموذج.",
+        "عند ثبات الشحنتين، مضاعفة المسافة تُقلّل مقدار القوة إلى الربع. الإشارة تحدد تجاذبًا أم تنافرًا.",
+        "السرعة المدارية تتحدد ببعد المركبة عن مركز الأرض؛ مقاومة الهواء غير ممثلة هنا.",
+        "يزداد تباعد الأهداب بزيادة الطول الموجي أو تقليل المسافة بين الشقين.",
+        "إذا كانت كثافة الجسم أقل من كثافة السائل فإنه يطفو مع انغمار جزء منه؛ وإلا يغوص.",
+        "زيادة معدل تغيّر الفيض المغناطيسي تزيد مقدار الجهد المستحث.",
+        "عند ثبات فرق الجهد، زيادة المقاومة تقلل التيار وفق قانون أوم.",
+        "يزداد الزمن المداري بازدياد المحور الأكبر؛ وتؤثر اللامركزية على موضعَي الحضيض والأوج.",
+        "يُسمع تردد أعلى عند اقتراب مصدر الصوت وأقل عند ابتعاده في الهواء الساكن.",
+        "يزداد زمن الدورة مع الجذر التربيعي لطول الخيط، ويقل بزيادة الجاذبية.",
+        "ينبعث إلكترون فقط إذا كانت طاقة الفوتون أكبر من دالة الشغل، لا بمجرد زيادة سطوع الضوء."
+    };
+    private static final String[] GRAPH_LABEL = {
+        "فصل اللونين (سم)", "سبق البندول (درجة/ساعة)", "القوة الموقّعة (نيوتن)",
+        "السرعة الدائرية (كم/ث)", "مسافة الأهداب (مم)", "قوة الطفو (نيوتن)",
+        "أقصى جهد مستحث (فولت)", "التيار (أمبير)", "زمن المدار (سنة)",
+        "التردد المسموع (هرتز)", "الدورة (ثانية)", "طاقة الإلكترون (eV)"
+    };
     private final int[] aProgress=A_INIT.clone(), bProgress=B_INIT.clone();
+    private final boolean[] done=new boolean[12];
+    private boolean guided=true, showExplanation=false, showGraph=false;
+    private int guideStep=0, currentFocus=0;
+    private double[] savedA=new double[12],savedB=new double[12],savedQ2=new double[12];
+    private boolean[] hasSaved=new boolean[12];
+    private SharedPreferences storage;
+    private TextView guideText, compareText;
+    private LabGraphView graphView;
+    private SeekBar firstSlider,secondSlider;
+    private ScrollView scrolling;
+    private int learningCredits=0;
     // Coulomb lab: q1 is the signed A slider (-5 .. +5 µC);
     // q2 is independently adjustable, so both polarities can be explored.
     private double secondChargeMicroCoulombs=2.0;
@@ -100,6 +162,20 @@ public final class ScienceLabsActivity extends Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        storage=getSharedPreferences("alradhy_discovery_museum_v05",MODE_PRIVATE);
+        for(int i=0;i<12;i++){
+            aProgress[i]=storage.getInt("a_"+i,A_INIT[i]);
+            bProgress[i]=storage.getInt("b_"+i,B_INIT[i]);
+            savedA[i]=storage.getFloat("compare_a_"+i,0);
+            savedB[i]=storage.getFloat("compare_b_"+i,0);
+            savedQ2[i]=storage.getFloat("compare_q2_"+i,2);
+            hasSaved[i]=storage.getBoolean("compare_has_"+i,false);
+            done[i]=storage.getBoolean("done_"+i,false);
+        }
+        guided=storage.getBoolean("guided",true);
+        showGraph=storage.getBoolean("showGraph",false);
+        learningCredits=storage.getInt("credits",0);
+        secondChargeMicroCoulombs=storage.getFloat("q2",2f);
         if(state==null && getIntent()!=null)
             selected=getIntent().getIntExtra("labIndex",-1);
         if(selected < -1 || selected >= 12) selected=-1;
@@ -108,12 +184,20 @@ public final class ScienceLabsActivity extends Activity {
             if(ap!=null&&ap.length==12) System.arraycopy(ap,0,aProgress,0,12);
             if(bp!=null&&bp.length==12) System.arraycopy(bp,0,bProgress,0,12);
             secondChargeMicroCoulombs=state.getDouble("charge2",2.0);
+            guided=state.getBoolean("guided",guided);
+            showGraph=state.getBoolean("showGraph",showGraph);
+            guideStep=state.getInt("guideStep",0);
+            showExplanation=state.getBoolean("showExplanation",false);
         }
         render();
     }
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("selected",selected);state.putIntArray("a",aProgress);state.putIntArray("b",bProgress);
         state.putDouble("charge2",secondChargeMicroCoulombs);
+        state.putBoolean("guided",guided);
+        state.putBoolean("showGraph",showGraph);
+        state.putInt("guideStep",guideStep);
+        state.putBoolean("showExplanation",showExplanation);
         super.onSaveInstanceState(state);
     }
     @Override public void onBackPressed(){
@@ -149,23 +233,106 @@ public final class ScienceLabsActivity extends Activity {
             p.leftMargin=dp(4);p.rightMargin=dp(4);bar.addView(button(labels[i],actions[i]),p);
         }LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(14);page.addView(bar,p);
     }
+    private void persist() {
+        if(storage==null)return;
+        SharedPreferences.Editor e=storage.edit();
+        for(int i=0;i<12;i++){
+            e.putInt("a_"+i,aProgress[i]).putInt("b_"+i,bProgress[i]);
+            e.putBoolean("done_"+i,done[i]);
+            e.putBoolean("compare_has_"+i,hasSaved[i]);
+            e.putFloat("compare_a_"+i,(float)savedA[i])
+             .putFloat("compare_b_"+i,(float)savedB[i])
+             .putFloat("compare_q2_"+i,(float)savedQ2[i]);
+        }
+        e.putFloat("q2",(float)secondChargeMicroCoulombs);
+        e.putBoolean("guided",guided).putBoolean("showGraph",showGraph)
+         .putInt("credits",learningCredits).apply();
+    }
+    private void resetThisLab(){
+        if(selected<0)return;
+        aProgress[selected]=A_INIT[selected];
+        bProgress[selected]=B_INIT[selected];
+        if(selected==2)secondChargeMicroCoulombs=2;
+        guideStep=0;showExplanation=false;
+        persist();render();
+    }
+    private void goLab(int index){
+        selected=index;
+        guideStep=0;showExplanation=false;currentFocus=0;
+        persist();render();
+    }
+    private void stepProgress(boolean forward){
+        guideStep=(guideStep+(forward?1:2))%3;
+        if(guideStep==2 && !done[selected]){
+            done[selected]=true;
+            learningCredits++;
+            persist();
+        }
+        render();
+    }
+    private void saveComparison(){
+        if(selected<0)return;
+        hasSaved[selected]=true;savedA[selected]=a();savedB[selected]=b();
+        savedQ2[selected]=secondChargeMicroCoulombs;
+        persist();updateComparison();
+    }
+    private void setProgress(boolean first,int progress){
+        if(selected<0)return;
+        int p=Math.max(0,Math.min(100,progress));
+        if(first){aProgress[selected]=p;if(firstSlider!=null)firstSlider.setProgress(p);}
+        else{bProgress[selected]=p;if(secondSlider!=null)secondSlider.setProgress(p);}
+        persist();update();
+    }
     private void render(){
+        firstSlider=null;secondSlider=null;graphView=null;
+        guideText=null;compareText=null;
         chargeOneSlider=null;
         drawing=null;result=null;aValue=null;bValue=null;
         ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setBackgroundColor(BG);
+        scrolling=sc;
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(dp(46),dp(20),dp(46),dp(40));
         sc.addView(page);setContentView(sc);
-        line("ALRADHY DISCOVERY • 15 مختبرًا علميًا",18,GOLD);
+        line("ALRADHY DISCOVERY • متحف العلوم التفاعلي V0.5  •  15 مختبرًا",18,GOLD);
         if(selected<0){renderHub();return;}
         final int i=selected;
         line("المختبر "+(i+4)+" من 15  •  "+NAMES[i],27,WHITE);
-        row(new String[]{"المختبرات", "السابق", "التالي"},new Runnable[]{
+        row(new String[]{"🏛️ المختبرات","◀ السابق","التالي ▶"},new Runnable[]{
             ()->{selected=-1;render();},
-            ()->{selected=(selected+11)%12;render();},
-            ()->{selected=(selected+1)%12;render();}
+            ()->goLab((selected+11)%12),
+            ()->goLab((selected+1)%12)
         });
-        drawing=new LabCanvas();drawing.setFocusable(false);
-        page.addView(drawing,new LinearLayout.LayoutParams(-1,dp(260)));
+        row(new String[]{guided?"☑ تعلّم معي":"□ تعلّم معي",guided?"استكشف بحرّيتك":"تعلّم خطوة بخطوة","⟲ إعادة ضبط"},new Runnable[]{
+            ()->{guided=!guided;persist();render();},
+            ()->{guided=!guided;persist();render();},
+            ()->resetThisLab()
+        });
+        if(guided){
+            line("🔎 رحلة الاكتشاف",20,GOLD);
+            guideText=text("",18,WHITE);
+            guideText.setBackground(shape(CARD,Color.rgb(62,89,115)));
+            page.addView(guideText,new LinearLayout.LayoutParams(-1,-2));
+            updateGuide();
+            row(new String[]{"الخطوة السابقة","الخطوة التالية","ليش صار كذا؟"},new Runnable[]{
+                ()->stepProgress(false),
+                ()->stepProgress(true),
+                ()->{showExplanation=!showExplanation;render();}
+            });
+        }
+        line("🕰️ القصة: "+HISTORY[i],17,MUTED);
+        line("🌍 تطبيقات اليوم: "+APPLICATIONS[i],17,CYAN);
+        drawing=new LabCanvas();
+        drawing.setFocusable(true);
+        drawing.setContentDescription("اسحب يمين ويسار داخل التجربة لتعديل المتغير الأول، وفوق وتحت لتعديل المتغير الثاني");
+        drawing.setOnKeyListener((v,key,ev)->{
+            if(ev.getAction()!=KeyEvent.ACTION_DOWN)return false;
+            if(key==KeyEvent.KEYCODE_DPAD_LEFT){setProgress(true,aProgress[selected]-2);return true;}
+            if(key==KeyEvent.KEYCODE_DPAD_RIGHT){setProgress(true,aProgress[selected]+2);return true;}
+            if(key==KeyEvent.KEYCODE_DPAD_UP){setProgress(false,bProgress[selected]+2);return true;}
+            if(key==KeyEvent.KEYCODE_DPAD_DOWN){setProgress(false,bProgress[selected]-2);return true;}
+            return false;
+        });
+        page.addView(drawing,new LinearLayout.LayoutParams(-1,dp(280)));
+        line("🖱️ اسحب داخل الرسم يمين/يسار لتغيير المتغير الأول، أو فوق/تحت للمتغير الثاني. الريموت: الأسهم بعد تحديد الرسم.",15,CYAN);
         result=text("",20,WHITE);result.setBackground(shape(CARD,Color.rgb(44,73,104)));
         result.setPadding(dp(18),dp(14),dp(18),dp(14));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(13);p.bottomMargin=dp(14);page.addView(result,p);
@@ -185,6 +352,35 @@ public final class ScienceLabsActivity extends Activity {
             });
         }
         aValue=control(i,true);bValue=control(i,false);
+        row(new String[]{"A −","A +","B −","B +"},new Runnable[]{
+            ()->setProgress(true,aProgress[selected]-5),
+            ()->setProgress(true,aProgress[selected]+5),
+            ()->setProgress(false,bProgress[selected]-5),
+            ()->setProgress(false,bProgress[selected]+5)
+        });
+        row(new String[]{"حالة منخفضة","حالة متوسطة","حالة مرتفعة"},new Runnable[]{
+            ()->{setProgress(true,10);setProgress(false,10);},
+            ()->{setProgress(true,50);setProgress(false,50);},
+            ()->{setProgress(true,90);setProgress(false,90);}
+        });
+        row(new String[]{"📊 رسم العلاقة","📌 احفظ للمقارنة","❔ التفسير"},new Runnable[]{
+            ()->{showGraph=!showGraph;persist();render();},
+            ()->saveComparison(),
+            ()->{showExplanation=!showExplanation;render();}
+        });
+        compareText=text("",17,WHITE);
+        compareText.setBackground(shape(CARD,Color.rgb(50,84,109)));
+        compareText.setPadding(dp(16),dp(12),dp(16),dp(12));
+        page.addView(compareText,new LinearLayout.LayoutParams(-1,-2));
+        updateComparison();
+        if(showGraph){
+            line("📈 كيف تتغير النتيجة عند تغيير "+A_LABEL[i]+" مع ثبات "+B_LABEL[i]+"؟",18,GOLD);
+            graphView=new LabGraphView();
+            graphView.setFocusable(false);
+            page.addView(graphView,new LinearLayout.LayoutParams(-1,dp(230)));
+            line("المحور الأفقي: "+A_LABEL[i]+" | المحور الرأسي: "+GRAPH_LABEL[i],15,MUTED);
+        }
+        if(showExplanation) line("💡 ليش صار كذا؟ "+INSIGHT[i],18,GREEN);
         if(i==2){
             row(new String[]{"q1 −0.5 µC","q1 +0.5 µC","q2 −0.5 µC","q2 +0.5 µC"},new Runnable[]{
                 ()->setFirstCharge(a()-0.5),
@@ -199,7 +395,9 @@ public final class ScienceLabsActivity extends Activity {
         update();
     }
     private void renderHub(){
-        line("3 مختبرات أصلية مطوّرة + 12 مختبرًا جديدًا. لكل مختبر متغيرات تحكم وحسابات خاصة به.",23,WHITE);
+        line("3 مختبرات أصلية + 12 مختبرًا جديدًا. استكشف بنفسك أو اختر التعلّم الموجّه، وقارن النتائج واحفظ تقدمك.",23,WHITE);
+        int completed=0;for(boolean d:done)if(d)completed++;
+        line("⭐ مكتمل: "+completed+" من 12 مختبرًا جديدًا   •   نقاط الاستكشاف: "+learningCredits,18,GREEN);
         line("المختبرات الأصلية • قياس سرعة الضوء",22,GOLD);
         row(new String[]{"غاليليو • الفوانيس","رومر • خسوف آيو","فيزو • العجلة"},new Runnable[]{
             ()->openOriginal("galileo"),()->openOriginal("romer"),()->openOriginal("fizeau")
@@ -223,11 +421,13 @@ public final class ScienceLabsActivity extends Activity {
         SeekBar slider=new SeekBar(this);slider.setMax(100);slider.setProgress(first?aProgress[i]:bProgress[i]);
         slider.setFocusable(true);slider.setContentDescription(first?A_LABEL[i]:B_LABEL[i]);
         if(i==2&&first)chargeOneSlider=slider;
+        if(first)firstSlider=slider;else secondSlider=slider;
         box.addView(slider,new LinearLayout.LayoutParams(-1,dp(44)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(5);page.addView(box,p);
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar s,int value,boolean user){
-                if(first)aProgress[i]=value;else bProgress[i]=value;update();
+                if(first)aProgress[i]=value;else bProgress[i]=value;
+                persist();update();
             }
             public void onStartTrackingTouch(SeekBar s){}
             public void onStopTrackingTouch(SeekBar s){}
@@ -239,11 +439,11 @@ public final class ScienceLabsActivity extends Activity {
         int progress=(int)Math.round((bounded+5.0)*10.0);
         aProgress[2]=Math.max(0,Math.min(100,progress));
         if(chargeOneSlider!=null)chargeOneSlider.setProgress(aProgress[2]);
-        update();
+        persist();update();
     }
     private void setSecondCharge(double charge){
         secondChargeMicroCoulombs=Math.max(-5.0,Math.min(5.0,Math.round(charge*2.0)/2.0));
-        update();
+        persist();update();
     }
     private double a(){return value(A_MIN[selected],A_MAX[selected],aProgress[selected]);}
     private double b(){return value(B_MIN[selected],B_MAX[selected],bProgress[selected]);}
@@ -328,7 +528,10 @@ public final class ScienceLabsActivity extends Activity {
                     (energy>0?"ينبعث إلكترون؛ أقصى طاقة حركية "+n(energy,3)+" eV":"لا انبعاث كهروضوئي عند هذا الطول الموجي");break;
             }
         }
-        result.setText(out);if(drawing!=null)drawing.invalidate();
+        result.setText(out);
+        if(drawing!=null)drawing.invalidate();
+        if(graphView!=null)graphView.invalidate();
+        updateComparison();
     }
     private final class LabCanvas extends View {
         private final Paint p=new Paint(3);
