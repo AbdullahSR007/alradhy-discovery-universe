@@ -43,19 +43,19 @@ jobs:
         run: |
           set -euo pipefail
           cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-15-Labs.apk
-          test -s ALRADHY-Discovery-Interactive.apk
-          sha256sum ALRADHY-Discovery-Interactive.apk
+          test -s ALRADHY-Discovery-15-Labs.apk
+          sha256sum ALRADHY-Discovery-15-Labs.apk
       - name: Upload Fusion artifact
         uses: actions/upload-artifact@v4
         with:
           name: ALRADHY-Discovery-15-Labs-APK
-          path: ALRADHY-Discovery-Interactive.apk
+          path: ALRADHY-Discovery-15-Labs.apk
       - name: Publish Fusion preview prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "discovery-15-labs-v0.4.${{ github.run_number }}" ALRADHY-Discovery-Interactive.apk \
+          gh release create "discovery-15-labs-v0.4.${{ github.run_number }}" ALRADHY-Discovery-15-Labs.apk \
             --target "$GITHUB_SHA" \
             --title "ALRADHY Discovery 15 Labs - Interactive Science Universe" \
             --notes "Fifteen differentiated interactive physics models: Galileo, Roemer, Fizeau plus twelve distinct labs (prism, Foucault, Coulomb, orbit, double slit, buoyancy, Faraday, Ohm, Kepler, Doppler, pendulum, photoelectric effect); 50 stations, offline educational models. New app ID preserves old installations. Debug signed, device test pending." \
