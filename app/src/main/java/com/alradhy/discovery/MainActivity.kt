@@ -2,18 +2,18 @@ package com.alradhy.discovery
 
 import android.app.Activity
 import android.os.Bundle
+import android.view.Gravity
 import android.view.KeyEvent
 import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import android.graphics.Color
 
 class MainActivity : Activity() {
-    private var currentStationIndex = 0
+    private var currentIndex = 0
     private lateinit var titleView: TextView
     private lateinit var descView: TextView
-    private lateinit var categoryView: TextView
-    private lateinit var stationsContainer: LinearLayout
+    private lateinit var counterView: TextView
+    private lateinit var indicatorView: TextView
 
     private data class Station(val id: Int, val category: String, val title: String, val description: String)
 
@@ -72,84 +72,70 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(Color.parseColor("#0B0F19"))
-            setPadding(50, 40, 50, 40)
+            setBackgroundColor(Color.parseColor("#07090E"))
+            setPadding(80, 60, 80, 60)
+            gravity = Gravity.CENTER_VERTICAL
         }
-        categoryView = TextView(this).apply {
-            text = "ALRADHY DISCOVERY UNIVERSE - 50 STATIONS"
-            textSize = 18f
+
+        counterView = TextView(this).apply {
+            textSize = 16f
             setTextColor(Color.parseColor("#38BDF8"))
-            setPadding(0, 0, 0, 10)
+            setPadding(0, 0, 0, 20)
         }
-        rootLayout.addView(categoryView)
+        rootLayout.addView(counterView)
 
         titleView = TextView(this).apply {
-            textSize = 24f
+            textSize = 32f
             setTextColor(Color.WHITE)
             setTypeface(null, android.graphics.Typeface.BOLD)
-            setPadding(0, 0, 0, 20)
+            setPadding(0, 0, 0, 30)
         }
         rootLayout.addView(titleView)
 
         descView = TextView(this).apply {
-            textSize = 16f
+            textSize = 20f
             setTextColor(Color.parseColor("#94A3B8"))
-            setPadding(0, 0, 0, 30)
+            setPadding(0, 0, 0, 50)
         }
         rootLayout.addView(descView)
 
-        val scrollView = ScrollView(this).apply {
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT)
+        indicatorView = TextView(this).apply {
+            text = "◀ استعمل أزرار اليمين واليسار في الريموت للتنقل بين المحطات (50 / 1) ▶"
+            textSize = 14f
+            setTextColor(Color.parseColor("#64748B"))
         }
-        stationsContainer = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        scrollView.addView(stationsContainer)
-        rootLayout.addView(scrollView)
+        rootLayout.addView(indicatorView)
+
         setContentView(rootLayout)
-        buildStationsUI()
-        updateStationDisplay()
+        updateUI()
     }
 
-    private fun buildStationsUI() {
-        stationsContainer.removeAllViews()
-        for ((index, station) in stations.withIndex()) {
-            val tv = TextView(this).apply {
-                text = "[ ${station.category} ] ${station.title}"
-                textSize = 14f
-                setPadding(25, 20, 25, 20)
-                isFocusable = true
-                isFocusableInTouchMode = true
-                setTextColor(Color.WHITE)
-                setBackgroundColor(if (index == currentStationIndex) Color.parseColor("#1E293B") else Color.TRANSPARENT)
-                setOnClickListener { currentStationIndex = index; updateStationDisplay() }
-                setOnFocusChangeListener { _, hasFocus -> if (hasFocus) { currentStationIndex = index; updateStationDisplay() } }
-            }
-            stationsContainer.addView(tv)
-        }
-    }
-
-    private fun updateStationDisplay() {
-        val current = stations[currentStationIndex]
-        titleView.text = current.title
-        descView.text = current.description
-        categoryView.text = "CATEGORY: ${current.category.uppercase()} | STATION ${current.id} OF 50"
-        for (i in 0 until stationsContainer.childCount) {
-            val child = stationsContainer.getChildAt(i) as TextView
-            if (i == currentStationIndex) {
-                child.setBackgroundColor(Color.parseColor("#1E293B"))
-                child.setTextColor(Color.parseColor("#38BDF8"))
-            } else {
-                child.setBackgroundColor(Color.TRANSPARENT)
-                child.setTextColor(Color.WHITE)
-            }
-        }
+    private fun updateUI() {
+        val s = stations[currentIndex]
+        counterView.text = "SECTION: ${s.category.uppercase()}  |  STATION ${s.id} OF 50"
+        titleView.text = s.title
+        descView.text = s.description
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         when (keyCode) {
-            KeyEvent.KEYCODE_DPAD_UP -> { if (currentStationIndex > 0) { currentStationIndex--; updateStationDisplay() }; return true }
-            KeyEvent.KEYCODE_DPAD_DOWN -> { if (currentStationIndex < stations.size - 1) { currentStationIndex++; updateStationDisplay() }; return true }
+            KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_DPAD_DOWN -> {
+                if (currentIndex < stations.size - 1) {
+                    currentIndex++
+                    updateUI()
+                }
+                return true
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_UP -> {
+                if (currentIndex > 0) {
+                    currentIndex--
+                    updateUI()
+                }
+                return true
+            }
         }
         return super.onKeyDown(keyCode, event)
     }
