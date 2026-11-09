@@ -96,6 +96,9 @@ public final class ScienceLabsActivity extends Activity {
         super.onCreate(state);
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+        if(state==null && getIntent()!=null)
+            selected=getIntent().getIntExtra("labIndex",-1);
+        if(selected < -1 || selected >= 12) selected=-1;
         if(state!=null){selected=state.getInt("selected",-1);
             int[] ap=state.getIntArray("a"),bp=state.getIntArray("b");
             if(ap!=null&&ap.length==12) System.arraycopy(ap,0,aProgress,0,12);
