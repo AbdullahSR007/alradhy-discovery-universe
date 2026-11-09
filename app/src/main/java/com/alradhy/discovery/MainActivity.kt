@@ -538,7 +538,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val discoveryLabButton = TextView(this).apply {
-            text = "🔬 3 مختبرات مختلفة"
+            text = "🔬 15 مختبرًا علميًا"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -628,7 +628,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         infoCard.addView(subtitleText)
 
         experimentButton = TextView(this).apply {
-            text = "🔬 ادخل المختبرات العلمية"
+            text = "🔬 ادخل 15 مختبرًا علميًا"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
             typeface = Typeface.DEFAULT_BOLD
@@ -636,9 +636,13 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER
             styleInteractiveButton(this, "#16402F", "#46C8A0")
             setOnClickListener {
-                val intent = Intent(this@MainActivity, com.alradhy.discoverylab.MainActivity::class.java)
-                if (currentCategory == 0 && currentIndex == 16) intent.putExtra("experiment", "galileo")
-                startActivity(intent)
+                if (currentCategory == 0 && currentIndex == 16) {
+                    val intent = Intent(this@MainActivity, com.alradhy.discoverylab.MainActivity::class.java)
+                    intent.putExtra("experiment", "galileo")
+                    startActivity(intent)
+                } else {
+                    startActivity(Intent(this@MainActivity, com.alradhy.discoverylab.ScienceLabsActivity::class.java))
+                }
             }
         }
         infoCard.addView(experimentButton, LinearLayout.LayoutParams(
@@ -874,7 +878,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         badgeText.text = "محطة [ $globalNumber / 50 ]  •  ${item.badge}  •  ${item.region}"
         titleText.text = item.title
         subtitleText.text = item.subtitle
-        experimentButton.text = if (currentCategory == 0 && index == 16) "🔬 جرّب فوانيس غاليليو بنفسك" else "🔬 افتح 3 مختبرات وتجارب مختلفة"
+        experimentButton.text = if (currentCategory == 0 && index == 16) "🔬 جرّب فوانيس غاليليو بنفسك" else "🔬 افتح 15 مختبرًا وتجربة مختلفة"
         summaryText.text = item.summary
 
         factsContainer.removeAllViews()
