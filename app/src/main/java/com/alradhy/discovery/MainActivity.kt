@@ -54,6 +54,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var speedLabel: TextView
     private lateinit var tabTimeBtn: TextView
     private lateinit var tabCosmosBtn: TextView
+    private lateinit var experimentButton: TextView
 
     // ==================== 25 HISTORY & SCIENCE STATIONS ====================
     private val historyStations = listOf(
@@ -537,7 +538,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val discoveryLabButton = TextView(this).apply {
-            text = "🔬 مختبر الضوء"
+            text = "🔬 3 مختبرات مختلفة"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -626,6 +627,24 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         infoCard.addView(subtitleText)
 
+        experimentButton = TextView(this).apply {
+            text = "🔬 ادخل المختبرات العلمية"
+            setTextColor(Color.WHITE)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(14), dp(9), dp(14), dp(9))
+            gravity = Gravity.CENTER
+            styleInteractiveButton(this, "#16402F", "#46C8A0")
+            setOnClickListener {
+                val intent = Intent(this@MainActivity, com.alradhy.discoverylab.MainActivity::class.java)
+                if (currentCategory == 0 && currentIndex == 16) intent.putExtra("experiment", "galileo")
+                startActivity(intent)
+            }
+        }
+        infoCard.addView(experimentButton, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { bottomMargin = dp(8) })
+
         val infoScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = true
         }
@@ -667,7 +686,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(dp(14), dp(8), dp(8), dp(8))
         }
         val simHintBadge = TextView(this).apply {
-            text = "⚡ المحاكاة الفيزيائية الحية (60 FPS)"
+            text = "✨ رسم توضيحي • للتجارب افتح المختبر"
             setTextColor(Color.parseColor("#00E5FF"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
             background = makeRoundedBox("#AA0A1226", "#00E5FF", 1, 10)
@@ -752,7 +771,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         bottomBar.addView(quizBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val speedBtn = TextView(this).apply {
-            text = "⏩ السرعة"
+            text = "⏩ حركة الرسم"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setPadding(dp(12), dp(8), dp(12), dp(8))
@@ -772,7 +791,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         bottomBar.addView(speedBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val energyBtn = TextView(this).apply {
-            text = "⚡ طاقة"
+            text = "🔆 حجم المؤثر"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             setPadding(dp(12), dp(8), dp(12), dp(8))
@@ -855,6 +874,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         badgeText.text = "محطة [ $globalNumber / 50 ]  •  ${item.badge}  •  ${item.region}"
         titleText.text = item.title
         subtitleText.text = item.subtitle
+        experimentButton.text = if (currentCategory == 0 && index == 16) "🔬 جرّب فوانيس غاليليو بنفسك" else "🔬 افتح 3 مختبرات وتجارب مختلفة"
         summaryText.text = item.summary
 
         factsContainer.removeAllViews()

@@ -8,7 +8,7 @@
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:banner="@drawable/ic_banner"
-        android:label="ALRADHY Discovery Fusion"
+        android:label="ALRADHY Discovery Interactive"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
 

@@ -42,21 +42,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Fusion-ChatGPT.apk
-          test -s ALRADHY-Discovery-Fusion-ChatGPT.apk
-          sha256sum ALRADHY-Discovery-Fusion-ChatGPT.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Interactive.apk
+          test -s ALRADHY-Discovery-Interactive.apk
+          sha256sum ALRADHY-Discovery-Interactive.apk
       - name: Upload Fusion artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Fusion-ChatGPT-APK
-          path: ALRADHY-Discovery-Fusion-ChatGPT.apk
+          name: ALRADHY-Discovery-Interactive-APK
+          path: ALRADHY-Discovery-Interactive.apk
       - name: Publish Fusion preview prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "fusion-chatgpt-v0.2.${{ github.run_number }}" ALRADHY-Discovery-Fusion-ChatGPT.apk \
+          gh release create "discovery-interactive-v0.3.${{ github.run_number }}" ALRADHY-Discovery-Interactive.apk \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Fusion ChatGPT - 50 stations and Fizeau Lab" \
-            --notes "Preview APK: 25 history stations, 25 cosmic scale stations, integrated five-scene Fizeau lab, quiz title fix, progress restore, unique launcher icon. App ID: com.alradhy.discoveryfusion. Debug-signed test APK; updates across cloud runs may require reinstall until persistent secure signing is configured. Existing Gemini/ChatGPT apps are untouched." \
+            --title "ALRADHY Discovery Interactive - Galileo Roemer Fizeau" \
+            --notes "Native separate Galileo lantern timing, Roemer Io eclipse delay and Fizeau rotating wheel experiments with distance adjustment. Includes 50 history/cosmic information stations, quizzes and audio. App ID: com.alradhy.discoveryinteractive (separate install protects older installations). Debug signed, device testing pending." \
             --prerelease
