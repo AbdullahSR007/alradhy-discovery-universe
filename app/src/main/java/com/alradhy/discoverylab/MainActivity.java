@@ -2,6 +2,9 @@ package com.alradhy.discoverylab;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.content.SharedPreferences;
+import android.app.AlertDialog;
+import android.view.MotionEvent;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.graphics.Canvas;
@@ -51,6 +54,13 @@ public final class MainActivity extends Activity {
         "القيمة المعرّفة لسرعة الضوء في الفراغ اليوم: 299,792,458 مترًا في الثانية.\n\nهذا النموذج التعليمي يستخدم هذه القيمة، ولا يمثل الجهاز التاريخي بكامل تفاصيله."
     };
     private int page = 0; // 0 home, 1 story, 2 Fizeau, 3 Galileo, 4 Roemer
+    private SharedPreferences saved;
+    private boolean guideOn=true;
+    private final boolean[] measured={false,false,false};
+    private final double[] measuredValue={0,0,0};
+    private TextView compareLabel;
+    private float dragStartX;
+    private int originalStart;
     private int galileoDistanceMeters = 1000;
     private int observerReactionMs = 250;
     private boolean galileoFired = false;
@@ -68,6 +78,19 @@ public final class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
+        saved=getSharedPreferences("alradhy_light_v05",MODE_PRIVATE);
+        guideOn=saved.getBoolean("guideOn",true);
+        if(state==null){
+            rpm=saved.getInt("rpm",350);
+            distanceMeters=saved.getInt("distance",8633);
+            galileoDistanceMeters=saved.getInt("galileoDistance",1000);
+            observerReactionMs=saved.getInt("observerReactionMs",250);
+            romerEarthPosition=saved.getInt("romerPosition",0);
+        }
+        for(int i=0;i<3;i++){
+            measured[i]=saved.getBoolean("hasMeasure_"+i,false);
+            measuredValue[i]=Double.longBitsToDouble(saved.getLong("measure_"+i,0L));
+        }
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
             View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
@@ -191,6 +214,58 @@ public final class MainActivity extends Activity {
         else if (page == 3) galileoLab();
         else if (page == 4) roemerLab();
         else home();
+        if(page>=2)lightMuseumTools();
+    }
+    private void saveLightState(){
+        if(saved==null)return;
+        SharedPreferences.Editor e=saved.edit()
+            .putBoolean("guideOn",guideOn).putInt("rpm",rpm).putInt("distance",distanceMeters)
+            .putInt("galileoDistance",galileoDistanceMeters)
+            .putInt("observerReactionMs",observerReactionMs).putInt("romerPosition",romerEarthPosition);
+        for(int i=0;i<3;i++)e.putBoolean("hasMeasure_"+i,measured[i])
+            .putLong("measure_"+i,Double.doubleToLongBits(measuredValue[i]));
+        e.apply();
+    }
+    @Override protected void onPause(){saveLightState();super.onPause();}
+    private int activeLight(){return page==3?0:page==4?1:2;}
+    private double lightReading(){return page==3?galileoMicroseconds():page==4?romerExtraSeconds():100*brightness();}
+    private String lightUnit(){return page==3?"µs":page==4?"ث":"%";}
+    private void refreshMeasure(){
+        if(compareLabel==null)return;
+        int k=activeLight();
+        compareLabel.setText(measured[k] ?
+            "📌 القياس الأول: "+String.format(Locale.US,"%.2f",measuredValue[k])+" "+lightUnit()+
+            "   |   الحالي: "+String.format(Locale.US,"%.2f",lightReading())+" "+lightUnit()+
+            "   |   الفرق: "+String.format(Locale.US,"%+.2f",lightReading()-measuredValue[k])+" "+lightUnit():
+            "📌 احفظ القياس ثم غيّر المتغيرات وقارن النتيجة.");
+    }
+    private void whyLight(){
+        String answer=page==3?
+            "تأخر الضوء في مسافة بضعة كيلومترات أصغر آلاف المرات تقريبًا من زمن استجابة الإنسان؛ لذلك كان قياس غاليليو محدود الدقة. اليوم نستفيد من أجهزة توقيت وساعات فائقة الدقة.":
+            page==4?"مواعيد خسوف آيو تبدو متأخرةً حين يطول طريق الضوء إلى الأرض. اعتمد رومر على تراكم فروق التوقيت خلال مدارات متعددة، وهو أساس مهم لفهم تأخر الإشارات الفضائية.":
+            "يدور قرص فيزو خلال رحلة الضوء ذهابًا وإيابًا. عندما يعود الشعاع ويقابل سنًا بدل الفتحة ينخفض الضوء المرصود. تُستخدم قياسات زمن انتقال الضوء اليوم في أجهزة قياس المسافة والألياف البصرية.";
+        new AlertDialog.Builder(this).setTitle("💡 ليش صار كذا؟")
+            .setMessage(answer).setPositiveButton("تمام",(d,v)->d.dismiss()).show();
+    }
+    private void lightMuseumTools(){
+        if(guideOn) addText(page==3?"🧭 توقّع: هل تأخر الضوء أم استجابة الإنسان أكبر؟":
+            page==4?"🧭 توقّع: وش بيصير لتوقيت خسوف آيو لو بَعُدت الأرض؟":
+                    "🧭 توقّع: متى تطفئ العجلة الشعاع العائد؟",18,GOLD,true,12);
+        rowButtons(new String[]{guideOn?"☑ تعلّم معي":"□ تعلّم معي","استكشف بحرّيتك","💡 ليش صار كذا؟"},new Runnable[]{
+            ()->{guideOn=!guideOn;saveLightState();render();},
+            ()->{guideOn=false;saveLightState();render();},
+            ()->whyLight()
+        });
+        rowButtons(new String[]{"📌 احفظ القياس","📊 قارن النتيجة"},new Runnable[]{
+            ()->{int k=activeLight();measured[k]=true;measuredValue[k]=lightReading();saveLightState();refreshMeasure();},
+            ()->refreshMeasure()
+        });
+        compareLabel=label("",17,TEXT,true);
+        compareLabel.setBackground(shape(PANEL,Color.rgb(39,73,108)));
+        compareLabel.setPadding(dp(18),dp(14),dp(18),dp(14));
+        column.addView(compareLabel);
+        refreshMeasure();
+        addText("هذه محاكاة تعليمية؛ الأرقام ليست قراءات أجهزة قياس حقيقية.",15,MUTED,false,0);
     }
     private void home() {
         addText("اكتشف كيف قاس الإنسان سرعة الضوء", 34, TEXT, true, 16);
@@ -254,6 +329,15 @@ public final class MainActivity extends Activity {
         galileoView = new GalileoView();
         galileoView.setBackground(shape(PANEL, Color.rgb(62, 89, 120)));
         galileoView.setFocusable(true);
+        galileoView.setOnTouchListener((v,e)->{
+            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=galileoDistanceMeters;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+                galileoDistanceMeters=Math.max(500,Math.min(10000,
+                    500*Math.round((originalStart+(e.getX()-dragStartX)*7000/Math.max(1,v.getWidth()))/500f)));
+                galileoFired=false;updateGalileo();return true;
+            }
+            return true;
+        });
         galileoView.setOnKeyListener((v, code, ev) -> {
             if (ev.getAction()!=KeyEvent.ACTION_DOWN) return false;
             if (code==KeyEvent.KEYCODE_DPAD_RIGHT) { changeGalileoDistance(500);return true; }
@@ -309,6 +393,15 @@ public final class MainActivity extends Activity {
         addText("غيّر موضع الأرض بالنسبة إلى المشتري. الزمن المتوقع لخسوف قمر آيو لا يتغير في هذا النموذج، لكن الضوء يصلنا متأخرًا كلما زادت المسافة. الفارق هنا نسبي بين موضعين، وليس وقت حدوث الخسوف الحقيقي.", 18, MUTED, false, 15);
         roemerView = new RoemerView();
         roemerView.setFocusable(true);
+        roemerView.setOnTouchListener((v,e)->{
+            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=romerEarthPosition;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+                romerEarthPosition=Math.max(0,Math.min(8,Math.round(originalStart+
+                    (e.getX()-dragStartX)*8/Math.max(1,v.getWidth()))));
+                romerObserved=false;updateRoemer();return true;
+            }
+            return true;
+        });
         roemerView.setBackground(shape(PANEL, Color.rgb(62,89,120)));
         roemerView.setOnKeyListener((v,code,ev)->{
             if(ev.getAction()!=KeyEvent.ACTION_DOWN) return false;
@@ -434,6 +527,15 @@ public final class MainActivity extends Activity {
                 18,MUTED,false,14);
         labView = new LightLabView();
         labView.setFocusable(true);
+        labView.setOnTouchListener((v,e)->{
+            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=rpm;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+                rpm=Math.max(0,Math.min(1400,Math.round(originalStart+
+                    (e.getX()-dragStartX)*1400/Math.max(1,v.getWidth()))));
+                updateReadout();return true;
+            }
+            return true;
+        });
         labView.setBackground(shape(PANEL,Color.rgb(50,90,125)));
         labView.setOnKeyListener((v, code, event)-> {
             if(event.getAction()!=KeyEvent.ACTION_DOWN) return false;

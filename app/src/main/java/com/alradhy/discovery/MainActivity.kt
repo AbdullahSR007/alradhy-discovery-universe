@@ -538,7 +538,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val discoveryLabButton = TextView(this).apply {
-            text = "🔬 15 مختبرًا علميًا"
+            text = "🏛️ متحف العلوم V0.5 (15 مختبرًا)"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -641,20 +641,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     intent.putExtra("experiment", "galileo")
                     startActivity(intent)
                 } else {
-                    val title = getCurrentList()[currentIndex].title
-                    val lab = when {
-                        title.contains("نيوتن") -> 0
-                        title.contains("فوكو") -> 1
-                        title.contains("كولوم") -> 2
-                        title.contains("يونغ") -> 4
-                        title.contains("أرخميدس") -> 5
-                        title.contains("فاراداي") -> 6
-                        title.contains("أوم") -> 7
-                        title.contains("كبلر") -> 8
-                        title.contains("دوبلر") -> 9
-                        title.contains("أينشتاين") -> 11
-                        else -> -1
-                    }
+                    val lab = suggestedMuseumLabIndex()
                     val intent = Intent(this@MainActivity, com.alradhy.discoverylab.ScienceLabsActivity::class.java)
                     if (lab >= 0) intent.putExtra("labIndex", lab)
                     startActivity(intent)
@@ -841,6 +828,31 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         setContentView(root)
     }
 
+
+    private val museumLabNames = arrayOf(
+        "منشور نيوتن", "بندول فوكو", "قانون كولوم", "مدفع نيوتن المداري",
+        "تداخل الضوء", "الطفو", "فاراداي", "قانون أوم",
+        "مدارات كبلر", "تأثير دوبلر", "زمن البندول", "التأثير الكهروضوئي"
+    )
+    private fun suggestedMuseumLabIndex(): Int {
+        if (currentCategory == 0) return when(currentIndex) {
+            12 -> 4
+            17 -> 3
+            18 -> 6
+            19 -> 6
+            20 -> 7
+            22 -> 11
+            else -> -1
+        }
+        return when(currentIndex) {
+            6 -> 11
+            9 -> 0
+            12 -> 9
+            14 -> 1
+            17 -> 8
+            else -> -1
+        }
+    }
     private fun getCurrentList(): List<DiscoveryItem> {
         return if (currentCategory == 0) historyStations else cosmicStations
     }
@@ -894,7 +906,12 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         badgeText.text = "محطة [ $globalNumber / 50 ]  •  ${item.badge}  •  ${item.region}"
         titleText.text = item.title
         subtitleText.text = item.subtitle
-        experimentButton.text = if (currentCategory == 0 && index == 16) "🔬 جرّب فوانيس غاليليو بنفسك" else "🔬 افتح 15 مختبرًا وتجربة مختلفة"
+        val relatedLab = suggestedMuseumLabIndex()
+        experimentButton.text = if (currentCategory == 0 && index == 16)
+            "🔬 جرّب فوانيس غاليليو بنفسك"
+        else if (relatedLab >= 0)
+            "🔬 جرّب بنفسك: " + museumLabNames[relatedLab]
+        else "🔬 افتح متحف العلوم: 15 تجربة تفاعلية"
         summaryText.text = item.summary
 
         factsContainer.removeAllViews()

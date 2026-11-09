@@ -8,11 +8,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.alradhy.discovery15labs.coulombfix"
+        applicationId "com.alradhy.discovery15labs.museumv05"
         minSdk 24
         targetSdk 34
-        versionCode 5
-        versionName "0.4.1-coulomb-controls"
+        versionCode 10
+        versionName "0.5.0-museum"
     }
 
     buildTypes {
