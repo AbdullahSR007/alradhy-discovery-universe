@@ -641,7 +641,23 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                     intent.putExtra("experiment", "galileo")
                     startActivity(intent)
                 } else {
-                    startActivity(Intent(this@MainActivity, com.alradhy.discoverylab.ScienceLabsActivity::class.java))
+                    val title = getCurrentList()[currentIndex].title
+                    val lab = when {
+                        title.contains("نيوتن") -> 0
+                        title.contains("فوكو") -> 1
+                        title.contains("كولوم") -> 2
+                        title.contains("يونغ") -> 4
+                        title.contains("أرخميدس") -> 5
+                        title.contains("فاراداي") -> 6
+                        title.contains("أوم") -> 7
+                        title.contains("كبلر") -> 8
+                        title.contains("دوبلر") -> 9
+                        title.contains("أينشتاين") -> 11
+                        else -> -1
+                    }
+                    val intent = Intent(this@MainActivity, com.alradhy.discoverylab.ScienceLabsActivity::class.java)
+                    if (lab >= 0) intent.putExtra("labIndex", lab)
+                    startActivity(intent)
                 }
             }
         }
