@@ -390,6 +390,10 @@ public final class ScienceLabsActivity extends Activity {
             });
             line("تقدر تسحب الشريط، أو تستخدم أزرار الزيادة والنقصان للضبط الدقيق. العلامات الموجبة تتنافر والمختلفة تتجاذب، وعند الصفر تنعدم القوة.",17,MUTED);
         }
+        row(new String[]{done[i]?"✅ تم الإنجاز":"✓ أنجزت التحدي", "إظهار / إخفاء النتيجة"},new Runnable[]{
+            ()->{if(!done[selected])learningCredits++;done[selected]=true;persist();render();},
+            ()->{showExplanation=!showExplanation;render();}
+        });
         line("🎯 جرّب بنفسك: "+CHALLENGES[i],18,GOLD);
         line("ما الذي يفترضه النموذج؟ "+LIMITS[i],16,MUTED);
         update();
@@ -533,9 +537,138 @@ public final class ScienceLabsActivity extends Activity {
         if(graphView!=null)graphView.invalidate();
         updateComparison();
     }
+
+    private void updateGuide() {
+        if(guideText==null||selected<0)return;
+        String lead=guideStep==0?"① التوقّع":guideStep==1?"② التجربة":"③ استنتاج النتيجة";
+        String body=guideStep==0 ? "قبل ما تغيّر الإعدادات، توقّع النتيجة: "+CHALLENGES[selected] :
+            guideStep==1 ? "غيّر الأدوات بالماوس أو أسهم الريموت وشاهد كيف تتغيّر الأرقام والرسم. جرب وضعين مختلفين ثم احفظ النتيجة الأولى." :
+            "قارن النتيجتين ثم فسّر الفرق بنفسك. "+INSIGHT[selected];
+        guideText.setText(lead+"  •  "+body);
+    }
+    private void updateComparison() {
+        if(compareText==null||selected<0)return;
+        if(!hasSaved[selected]){
+            compareText.setText("📌 المقارنة: احفظ قياسًا أولًا، وبعدها غيّر متغيرًا واحدًا وقارن النتيجتين.");
+            return;
+        }
+        int i=selected;
+        double before=metric(i,savedA[i],savedB[i],savedQ2[i]);
+        double after=metric(i,a(),b(),secondChargeMicroCoulombs);
+        double diff=after-before;
+        compareText.setText(
+            "📌 القياس المحفوظ: "+A_LABEL[i]+" = "+n(savedA[i],2)+", "+B_LABEL[i]+" = "+n(savedB[i],2)+
+            (i==2?", q2 = "+n(savedQ2[i],2)+" µC":"")+"\n"+
+            "قبل: "+n(before,4)+"  |  الآن: "+n(after,4)+"  |  الفرق: "+(diff>0?"+":"")+n(diff,4)+"\n"+
+            "الوحدة: "+GRAPH_LABEL[i]+"  •  غيّر أداة واحدة لتعرف السبب."
+        );
+    }
+    private double metric(int i,double x,double y,double q2){
+        switch(i){
+            case 0: {
+                double A=rad(x),red=2*Math.asin(bk7(650)*Math.sin(A/2))-A,
+                  blue=2*Math.asin(bk7(450)*Math.sin(A/2))-A;
+                return y*(Math.tan(blue)-Math.tan(red))*100;
+            }
+            case 1: return 15.041067*Math.sin(rad(x));
+            case 2: return 8.9875517923e9*(x*1e-6)*(q2*1e-6)/(y*y);
+            case 3: return Math.sqrt(3.986004418e14/((6371+x)*1000.0))/1000.0;
+            case 4: return x*1e-9*2.0/(y*1e-3)*1000.0;
+            case 5: return x*G*.001;
+            case 6: return 50*.01*2*Math.PI*y*x;
+            case 7: return x/y;
+            case 8: return Math.sqrt(x*x*x);
+            case 9: return x*343/(343-y);
+            case 10: return 2*Math.PI*Math.sqrt(x/y);
+            case 11: return Math.max(0,1239.841984/x-y);
+            default: return 0;
+        }
+    }
+    private final class LabGraphView extends View{
+        private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
+        LabGraphView(){super(ScienceLabsActivity.this);setBackground(shape(CARD,Color.rgb(48,75,104)));}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            if(selected<0)return;
+            float w=getWidth(),h=getHeight(),left=dp(36),right=w-dp(24),top=dp(22),bottom=h-dp(42);
+            if(right-left<80||bottom-top<80)return;
+            double bx=b();
+            double low=Double.POSITIVE_INFINITY,high=Double.NEGATIVE_INFINITY;
+            double[] vals=new double[101];
+            for(int step=0;step<=100;step++){
+                double ax=value(A_MIN[selected],A_MAX[selected],step);
+                double v=metric(selected,ax,bx,secondChargeMicroCoulombs);
+                if(!Double.isFinite(v))v=0;
+                vals[step]=v;low=Math.min(low,v);high=Math.max(high,v);
+            }
+            double spread=high-low;
+            if(spread<1e-10){high+=1;low-=1;}else{high+=.12*spread;low-=.12*spread;}
+            p.setStrokeWidth(dp(1));p.setColor(MUTED);p.setStyle(Paint.Style.STROKE);
+            for(int i=0;i<=4;i++){
+                float y=top+(bottom-top)*i/4f;
+                canvas.drawLine(left,y,right,y,p);
+            }
+            p.setStyle(Paint.Style.FILL);p.setColor(MUTED);p.setTextSize(dp(12));
+            canvas.drawText(n(high,2),dp(4),top+dp(6),p);
+            canvas.drawText(n(low,2),dp(4),bottom,p);
+            canvas.drawText(n(A_MIN[selected],1),left,bottom+dp(24),p);
+            canvas.drawText(n(A_MAX[selected],1),right-dp(35),bottom+dp(24),p);
+            Path curve=new Path();
+            for(int step=0;step<=100;step++){
+                float xx=left+(right-left)*step/100f;
+                float yy=(float)(bottom-(vals[step]-low)/(high-low)*(bottom-top));
+                if(step==0)curve.moveTo(xx,yy);else curve.lineTo(xx,yy);
+            }
+            p.setColor(CYAN);p.setStrokeWidth(dp(3));p.setStyle(Paint.Style.STROKE);
+            canvas.drawPath(curve,p);
+            double v=metric(selected,a(),bx,secondChargeMicroCoulombs);
+            float sx=left+(right-left)*aProgress[selected]/100f;
+            float sy=(float)(bottom-(v-low)/(high-low)*(bottom-top));
+            p.setStyle(Paint.Style.FILL);p.setColor(GOLD);canvas.drawCircle(sx,sy,dp(7),p);
+            p.setColor(WHITE);p.setTextSize(dp(13));
+            canvas.drawText("● "+n(v,3),Math.max(left,Math.min(right-dp(85),sx-dp(25))),Math.max(top+dp(15),sy-dp(12)),p);
+        }
+    }
     private final class LabCanvas extends View {
         private final Paint p=new Paint(3);
+        private float downX,downY;
+        private int downA,downB;
+        private double downQ2;
+        private boolean dragSecondCharge;
         LabCanvas(){super(ScienceLabsActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        @Override public boolean onTouchEvent(MotionEvent ev){
+            if(selected<0)return false;
+            switch(ev.getActionMasked()){
+                case MotionEvent.ACTION_DOWN:
+                    downX=ev.getX();downY=ev.getY();
+                    downA=aProgress[selected];downB=bProgress[selected];
+                    downQ2=secondChargeMicroCoulombs;
+                    dragSecondCharge=selected==2&&downX>getWidth()*.57f;
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                    requestFocus();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                case MotionEvent.ACTION_UP:
+                    float dx=ev.getX()-downX,dy=ev.getY()-downY;
+                    if(selected==2 && dragSecondCharge){
+                        setSecondCharge(downQ2+dx/Math.max(1f,getWidth())*10.0);
+                    }else if(Math.abs(dx)>=Math.abs(dy)){
+                        setProgress(true,downA+Math.round(dx/Math.max(1f,getWidth())*100));
+                    }else{
+                        setProgress(false,downB-Math.round(dy/Math.max(1f,getHeight())*100));
+                    }
+                    if(ev.getActionMasked()==MotionEvent.ACTION_UP){
+                        getParent().requestDisallowInterceptTouchEvent(false);
+                        performClick();
+                    }
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                    return true;
+                default:return super.onTouchEvent(ev);
+            }
+        }
+        @Override public boolean performClick(){super.performClick();return true;}
         private void line(Canvas c,float x,float y,float xx,float yy,int color,float width){
             p.setColor(color);p.setStrokeWidth(width);p.setStyle(Paint.Style.STROKE);c.drawLine(x,y,xx,yy,p);p.setStyle(Paint.Style.FILL);
         }
