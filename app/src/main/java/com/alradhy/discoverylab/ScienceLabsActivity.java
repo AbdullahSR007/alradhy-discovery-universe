@@ -40,7 +40,7 @@ public final class ScienceLabsActivity extends Activity {
         "غاليليو • زمن البندول", "أينشتاين • التأثير الكهروضوئي"
     };
     private static final String[] A_LABEL={
-        "زاوية رأس المنشور (درجة)", "خط العرض (درجة)", "الشحنة الأولى (ميكروكولوم)",
+        "زاوية رأس المنشور (درجة)", "خط العرض (درجة)", "الشحنة الأولى q1 (ميكروكولوم؛ السالب يسار الصفر)",
         "الارتفاع عن الأرض (كم)", "الطول الموجي (نانومتر)", "كثافة السائل (كغ/م³)",
         "سعة تغير المجال (تسلا)", "فرق الجهد (فولت)", "نصف المحور الأكبر (AU)",
         "تردد المصدر (هرتز)", "طول الخيط (متر)", "الطول الموجي (نانومتر)"
@@ -54,7 +54,7 @@ public final class ScienceLabsActivity extends Activity {
     private static final String[] LIMITS={
         "المنشور من زجاج BK7، واستُخدمت صيغة الانحراف الأصغر؛ أهملنا امتصاص الزجاج والتشتت داخل الحزمة.",
         "معدل سبق بندول فوكو 15.041 درجة/ساعة × جيب خط العرض؛ نموذج مثالي يتجاهل الاحتكاك.",
-        "قانون كولوم لشحنتين نقطيتين ساكنتين في الفراغ. الشحنة الثانية ثابتة عند +2 ميكروكولوم.",
+        "قانون كولوم لشحنتين نقطيتين ساكنتين في الفراغ. تقدر تغيّر مقدار وإشارة كل شحنة والمسافة بينهما.",
         "نموذج مدار كبلري دون مقاومة جوية. السرعة دون المدارية قد تصطدم بالأرض؛ لا يمثل إطلاقاً حقيقياً.",
         "فاصل الأهداب يقارب λL/d، عند شاشة تبعد مترين ومع زوايا صغيرة، دون غلاف حيود الشق الواحد.",
         "الحجم لتر واحد. قوة الطفو المعروضة للانغمار الكامل، ونسبة الغمر عند الطفو مفترضة لاتزان هادئ.",
@@ -68,7 +68,7 @@ public final class ScienceLabsActivity extends Activity {
     private static final String[] CHALLENGES={
         "ارفع زاوية المنشور: هل يزيد الفصل بين الأحمر والأزرق؟",
         "ضع خط العرض عند الصفر، ثم عند القطب: كيف يتغيّر سبق البندول؟",
-        "اجعل الشحنة الأولى سالبة ثم موجبة، وقارن اتجاه القوة.",
+        "جرّب (+,+) ثم (+,−) ثم (−,−). اضغط الصفر، وبعدها غيّر المسافة وراقب مقدار القوة واتجاهها.",
         "اضبط السرعة حتى تقترب من السرعة المدارية الدائرية.",
         "قلّل المسافة بين الشقين ولاحظ تباعد أهداب التداخل.",
         "اجعل كثافة الجسم أقل من السائل ثم أكبر منه.",
@@ -86,6 +86,10 @@ public final class ScienceLabsActivity extends Activity {
     private static final int[] A_INIT={50,72,70,25,35,50,50,50,30,50,40,40};
     private static final int[] B_INIT={40,25,45,40,40,50,40,20,25,50,48,40};
     private final int[] aProgress=A_INIT.clone(), bProgress=B_INIT.clone();
+    // Coulomb lab: q1 is the signed A slider (-5 .. +5 µC);
+    // q2 is independently adjustable, so both polarities can be explored.
+    private double secondChargeMicroCoulombs=2.0;
+    private SeekBar chargeOneSlider;
     private int selected=-1; // -1: all 15 labs
     private LinearLayout page;
     private TextView result, aValue, bValue;
@@ -103,11 +107,13 @@ public final class ScienceLabsActivity extends Activity {
             int[] ap=state.getIntArray("a"),bp=state.getIntArray("b");
             if(ap!=null&&ap.length==12) System.arraycopy(ap,0,aProgress,0,12);
             if(bp!=null&&bp.length==12) System.arraycopy(bp,0,bProgress,0,12);
+            secondChargeMicroCoulombs=state.getDouble("charge2",2.0);
         }
         render();
     }
     @Override protected void onSaveInstanceState(Bundle state){
         state.putInt("selected",selected);state.putIntArray("a",aProgress);state.putIntArray("b",bProgress);
+        state.putDouble("charge2",secondChargeMicroCoulombs);
         super.onSaveInstanceState(state);
     }
     @Override public void onBackPressed(){
@@ -144,6 +150,8 @@ public final class ScienceLabsActivity extends Activity {
         }LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(14);page.addView(bar,p);
     }
     private void render(){
+        chargeOneSlider=null;
+        drawing=null;result=null;aValue=null;bValue=null;
         ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setBackgroundColor(BG);
         page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(dp(46),dp(20),dp(46),dp(40));
         sc.addView(page);setContentView(sc);
@@ -161,7 +169,31 @@ public final class ScienceLabsActivity extends Activity {
         result=text("",20,WHITE);result.setBackground(shape(CARD,Color.rgb(44,73,104)));
         result.setPadding(dp(18),dp(14),dp(18),dp(14));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(13);p.bottomMargin=dp(14);page.addView(result,p);
+        if(i==2){
+            line("⚡ تحكم مباشر في قطبية كل شحنة — بالماوس أو بأسهم الريموت وزر OK",19,CYAN);
+            line("قطبية الشحنة الأولى q1",18,WHITE);
+            row(new String[]{"q1 سالب (−)","q1 صفر (0)","q1 موجب (+)"},new Runnable[]{
+                ()->setFirstCharge(-Math.max(0.5,Math.abs(a()))),
+                ()->setFirstCharge(0),
+                ()->setFirstCharge(Math.max(0.5,Math.abs(a())))
+            });
+            line("قطبية الشحنة الثانية q2",18,WHITE);
+            row(new String[]{"q2 سالب (−)","q2 صفر (0)","q2 موجب (+)"},new Runnable[]{
+                ()->setSecondCharge(-Math.max(0.5,Math.abs(secondChargeMicroCoulombs))),
+                ()->setSecondCharge(0),
+                ()->setSecondCharge(Math.max(0.5,Math.abs(secondChargeMicroCoulombs)))
+            });
+        }
         aValue=control(i,true);bValue=control(i,false);
+        if(i==2){
+            row(new String[]{"q1 −0.5 µC","q1 +0.5 µC","q2 −0.5 µC","q2 +0.5 µC"},new Runnable[]{
+                ()->setFirstCharge(a()-0.5),
+                ()->setFirstCharge(a()+0.5),
+                ()->setSecondCharge(secondChargeMicroCoulombs-0.5),
+                ()->setSecondCharge(secondChargeMicroCoulombs+0.5)
+            });
+            line("تقدر تسحب الشريط، أو تستخدم أزرار الزيادة والنقصان للضبط الدقيق. العلامات الموجبة تتنافر والمختلفة تتجاذب، وعند الصفر تنعدم القوة.",17,MUTED);
+        }
         line("🎯 جرّب بنفسك: "+CHALLENGES[i],18,GOLD);
         line("ما الذي يفترضه النموذج؟ "+LIMITS[i],16,MUTED);
         update();
@@ -190,6 +222,7 @@ public final class ScienceLabsActivity extends Activity {
         TextView title=text("",19,CYAN);box.addView(title);
         SeekBar slider=new SeekBar(this);slider.setMax(100);slider.setProgress(first?aProgress[i]:bProgress[i]);
         slider.setFocusable(true);slider.setContentDescription(first?A_LABEL[i]:B_LABEL[i]);
+        if(i==2&&first)chargeOneSlider=slider;
         box.addView(slider,new LinearLayout.LayoutParams(-1,dp(44)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(5);page.addView(box,p);
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
@@ -200,6 +233,17 @@ public final class ScienceLabsActivity extends Activity {
             public void onStopTrackingTouch(SeekBar s){}
         });
         return title;
+    }
+    private void setFirstCharge(double charge){
+        double bounded=Math.max(-5.0,Math.min(5.0,charge));
+        int progress=(int)Math.round((bounded+5.0)*10.0);
+        aProgress[2]=Math.max(0,Math.min(100,progress));
+        if(chargeOneSlider!=null)chargeOneSlider.setProgress(aProgress[2]);
+        update();
+    }
+    private void setSecondCharge(double charge){
+        secondChargeMicroCoulombs=Math.max(-5.0,Math.min(5.0,Math.round(charge*2.0)/2.0));
+        update();
     }
     private double a(){return value(A_MIN[selected],A_MAX[selected],aProgress[selected]);}
     private double b(){return value(B_MIN[selected],B_MAX[selected],bProgress[selected]);}
@@ -231,9 +275,10 @@ public final class ScienceLabsActivity extends Activity {
                     "الدوران المتراكم خلال "+n(y,1)+" ساعة = "+n(angle,1)+"°";break;
             }
             case 2:{
-                double force=8.9875517923e9*(x*1e-6)*(2e-6)/(y*y);
-                out="القوة بين الشحنتين: "+n(Math.abs(force),4)+" نيوتن\n"+
-                    (force<0?"تجاذب: شحنتان مختلفتا الإشارة":force>0?"تنافر: شحنتان متماثلتا الإشارة":"قوة منعدمة: إحدى الشحنتين صفر");break;
+                double force=8.9875517923e9*(x*1e-6)*(secondChargeMicroCoulombs*1e-6)/(y*y);
+                out="q1 = "+n(x,2)+" µC     |     q2 = "+n(secondChargeMicroCoulombs,2)+" µC\n"+
+                    "المسافة = "+n(y,2)+" متر     |     مقدار القوة = "+n(Math.abs(force),4)+" نيوتن\n"+
+                    (force<0?"تجاذب: شحنتان مختلفتا الإشارة، والأسهم للداخل":force>0?"تنافر: شحنتان متماثلتا الإشارة، والأسهم للخارج":"القوة صفر لأن إحدى الشحنتين صفر");break;
             }
             case 3:{
                 double r=(6371+x)*1000,v=y*1000,vc=Math.sqrt(3.986004418e14/r),ve=vc*Math.sqrt(2);
@@ -298,6 +343,15 @@ public final class ScienceLabsActivity extends Activity {
         private void caption(Canvas c,String text,float x,float y,int color,int size){
             p.setColor(color);p.setTextSize(size);p.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);c.drawText(text,x,y,p);
         }
+        private void arrow(Canvas c,float x1,float y1,float x2,float y2,int col,float sw){
+            line(c,x1,y1,x2,y2,col,sw);
+            float dx=x2-x1,dy=y2-y1;
+            float len=(float)Math.sqrt(dx*dx+dy*dy);
+            if(len<1)return;
+            float ux=dx/len,uy=dy/len;
+            line(c,x2,y2,x2-ux*15-uy*9,y2-uy*15+ux*9,col,sw);
+            line(c,x2,y2,x2-ux*15+uy*9,y2-uy*15-ux*9,col,sw);
+        }
         private void strokeCircle(Canvas c,float x,float y,float r,int col,float sw){
             p.setColor(col);p.setStrokeWidth(sw);p.setStyle(Paint.Style.STROKE);c.drawCircle(x,y,r,p);p.setStyle(Paint.Style.FILL);
         }
@@ -335,13 +389,22 @@ public final class ScienceLabsActivity extends Activity {
                 }
                 case 2:{ // Coulomb: charges and force vectors
                     float apart=(float)(180+240*y/2);float left=500-apart/2,right=500+apart/2;
-                    circle(c,left,215,46,x<0?ORANGE:CYAN);circle(c,right,215,46,CYAN);
-                    caption(c,x<0?"−":"+ ",left-14,225,BG,32);caption(c,"+",right-12,225,BG,33);
+                    double f=x*secondChargeMicroCoulombs;
+                    int col1=x<0?ORANGE:x>0?CYAN:MUTED;
+                    int col2=secondChargeMicroCoulombs<0?ORANGE:secondChargeMicroCoulombs>0?CYAN:MUTED;
+                    circle(c,left,215,46,col1);circle(c,right,215,46,col2);
+                    caption(c,x<0?"−":x>0?"+":"0",left-14,225,BG,32);
+                    caption(c,secondChargeMicroCoulombs<0?"−":secondChargeMicroCoulombs>0?"+":"0",right-14,225,BG,32);
                     line(c,left,300,right,300,MUTED,3);
-                    float dir=x<0?1:-1;
-                    line(c,left+dir*53,215,left+dir*125,215,GOLD,7);
-                    line(c,right-dir*53,215,right-dir*125,215,GOLD,7);
-                    caption(c,x<0?"ATTRACTION":x>0?"REPULSION":"ZERO CHARGE",365,385,WHITE,27);break;
+                    if(f!=0){
+                        float direction=f<0?1:-1;
+                        float length=(float)(50+Math.min(70,Math.abs(f)*8/y));
+                        arrow(c,left+direction*52,215,left+direction*(52+length),215,GOLD,6);
+                        arrow(c,right-direction*52,215,right-direction*(52+length),215,GOLD,6);
+                    }
+                    caption(c,f<0?"ATTRACTION":f>0?"REPULSION":"ZERO FORCE",365,385,WHITE,27);
+                    caption(c,"q1 "+n(x,1)+" uC",left-80,128,col1,22);
+                    caption(c,"q2 "+n(secondChargeMicroCoulombs,1)+" uC",right-80,128,col2,22);break;
                 }
                 case 3:{ // orbital speed relative to ideal circle
                     circle(c,500,217,70,CYAN);strokeCircle(c,500,217,185,MUTED,3);

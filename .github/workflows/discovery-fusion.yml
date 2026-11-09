@@ -58,5 +58,5 @@ jobs:
           gh release create "discovery-15-labs-v0.4.${{ github.run_number }}" ALRADHY-Discovery-15-Labs.apk \
             --target "$GITHUB_SHA" \
             --title "ALRADHY Discovery 15 Labs - Interactive Science Universe" \
-            --notes "Fifteen differentiated interactive physics models: Galileo, Roemer, Fizeau plus twelve distinct labs (prism, Foucault, Coulomb, orbit, double slit, buoyancy, Faraday, Ohm, Kepler, Doppler, pendulum, photoelectric effect); 50 stations, offline educational models. New app ID preserves old installations. Debug signed, device test pending." \
+            --notes "Coulomb charge-control fix: q1 and q2 polarity, zero, numeric steps and responsive force-vector arrows. Fifteen differentiated interactive physics models: Galileo, Roemer, Fizeau plus twelve distinct labs (prism, Foucault, Coulomb, orbit, double slit, buoyancy, Faraday, Ohm, Kepler, Doppler, pendulum, photoelectric effect); 50 stations, offline educational models. New app ID preserves old installations. Debug signed, device test pending." \
             --prerelease

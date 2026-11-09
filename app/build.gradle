@@ -8,11 +8,11 @@ android {
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.alradhy.discovery15labs"
+        applicationId "com.alradhy.discovery15labs.coulombfix"
         minSdk 24
         targetSdk 34
-        versionCode 4
-        versionName "0.4.0-15-labs"
+        versionCode 5
+        versionName "0.4.1-coulomb-controls"
     }
 
     buildTypes {
