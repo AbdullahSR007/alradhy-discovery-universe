@@ -1,4 +1,5 @@
 <resources>
-    <color name="black">#000000</color>
+    <color name="world_background">#040D17</color>
+    <color name="world_accent">#49CFBE</color>
     <color name="white">#FFFFFF</color>
 </resources>
