@@ -546,7 +546,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             styleInteractiveButton(this, "#16402F", "#46C8A0")
             setOnClickListener {
                 playClickSound(ToneGenerator.TONE_PROP_ACK)
-                startActivity(Intent(this@MainActivity, com.alradhy.discoverylab.MainActivity::class.java))
+                startActivity(Intent(this@MainActivity, com.alradhy.discoverylab.ScienceLabsActivity::class.java))
             }
         }
         headerRow.addView(discoveryLabButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
