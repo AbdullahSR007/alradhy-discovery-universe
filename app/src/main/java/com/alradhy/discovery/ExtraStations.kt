@@ -16,6 +16,13 @@ object ExtraStations {
         4.0, 7.0, 8.0, 9.0, 11.0, 13.0, 16.0, 17.0, 21.0, 22.0, 24.0, 27.0
     )
 
+    // ربط المحطات الجديدة بالمختبر المناسب (رقم المختبر في المتحف)
+    private val labByTitle = mapOf(
+        "كوبرنيكوس ومركزية الشمس" to 8, "كيبلر وقوانين حركة الكواكب" to 25, "روبرت هوك واكتشاف الخلية" to 21,
+        "فرانكلين والبرق والكهرباء" to 2, "رونتغن والأشعة السينية" to 11,
+        "المحطة الفضائية الدولية" to 3, "عطارد والزهرة — الكواكب الداخلية" to 29, "سحابة أورت — مهد المذنبات" to 32,
+        "عنقود الثريا — شموس فتية" to 27, "إشعاع الخلفية الكونية" to 24, "الحوت الأزرق — أكبر حيوان عرفته الأرض" to 5
+    )
     private val historyKeys = doubleArrayOf(1543.0, 1609.5, 1628.0, 1665.0, 1752.0, 1796.0, 1869.0, 1895.5, 1898.0, 1928.0)
     private val cosmicKeys = doubleArrayOf(-6.0, -4.0, -2.0, 1.0, 3.0, 5.0, 10.0, 15.0, 18.0, 26.0)
 
@@ -28,7 +35,7 @@ object ExtraStations {
     ): List<DiscoveryItem> {
         val all = ArrayList<Pair<Double, DiscoveryItem>>()
         base.forEachIndexed { i, it -> all.add(baseKeys[i] to it) }
-        extra.forEachIndexed { i, it -> all.add(extraKeys[i] to it) }
+        extra.forEachIndexed { i, it -> all.add(extraKeys[i] to it.copy(lab = labByTitle[it.title] ?: it.lab)) }
         return all.sortedBy { it.first }.map { it.second } // الترتيب ثابت (stable) عند تساوي المفتاح
     }
 

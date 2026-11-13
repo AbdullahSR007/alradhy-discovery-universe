@@ -271,7 +271,7 @@ public final class LightLabsActivity extends Activity {
         addText("اكتشف كيف قاس الإنسان سرعة الضوء", 34, TEXT, true, 16);
         addText("حكاية سينمائية قصيرة، ثم مختبر تفاعلي حقيقي — مصمم للريموت والماوس ويعمل دون إنترنت.",
                 21, MUTED, false, 26);
-        addCard("15 مختبرًا علميًا متميزًا",
+        addCard("50 مختبرًا علميًا متميزًا",
                 "غاليليو: قِس زمن الاستجابة البشرية بالفوانيس. رومر: غيّر مسافة الأرض عن المشتري وتتبّع تأخر خسوف آيو. فيزو: غيّر سرعة العجلة والمسافة وشاهد إطفاء الشعاع. كل مختبر له مشهد وحسابات وتحكم مختلف.");
         rowButtons(new String[]{"ابدأ رحلة الاكتشاف", "ادخل مختبر فيزو"}, new Runnable[]{
             () -> {page=1;chapter=0;render();},
@@ -282,7 +282,7 @@ public final class LightLabsActivity extends Activity {
             () -> {page=4;render();},
             () -> {page=2;render();}
         });
-        addButton("🔬 استكشف 15 مختبرًا تفاعليًا", () -> startActivity(new Intent(this, ScienceLabsActivity.class)));
+        addButton("🔬 استكشف 50 مختبرًا تفاعليًا", () -> startActivity(new Intent(this, ScienceLabsActivity.class)));
         addText("تنقل بالأسهم، واضغط OK للاختيار. استخدم الماوس للنقر أو التمرير.",
                 16, MUTED, false, 0);
     }

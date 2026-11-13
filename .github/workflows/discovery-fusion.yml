@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/pc"
-          javac -encoding UTF-8 -d "$RUNNER_TEMP/pc" app/src/main/java/com/alradhy/discoverylab/PhysicsModels.java scripts/PhysicsCheck.java
+          javac -encoding UTF-8 -d "$RUNNER_TEMP/pc" app/src/main/java/com/alradhy/discoverylab/PhysicsModels.java app/src/main/java/com/alradhy/discoverylab/LabCatalog.java scripts/PhysicsCheck.java
           java -cp "$RUNNER_TEMP/pc" PhysicsCheck
       - name: Prepare stable signing key (if secrets are configured)
         shell: bash

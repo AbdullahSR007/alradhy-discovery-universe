@@ -569,7 +569,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val discoveryLabButton = TextView(this).apply {
-            text = "🏛️ متحف العلوم V0.6 (15 مختبرًا)"
+            text = "🏛️ متحف العلوم V0.6 (50 مختبرًا)"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -660,7 +660,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         infoCard.addView(subtitleText)
 
         experimentButton = TextView(this).apply {
-            text = "🔬 ادخل 15 مختبرًا علميًا"
+            text = "🔬 ادخل 50 مختبرًا علميًا"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
             typeface = Typeface.DEFAULT_BOLD
@@ -895,7 +895,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         "منشور نيوتن", "بندول فوكو", "قانون كولوم", "مدفع نيوتن المداري",
         "تداخل الضوء", "الطفو", "فاراداي", "قانون أوم",
         "مدارات كبلر", "تأثير دوبلر", "زمن البندول", "التأثير الكهروضوئي"
-    )
+    ) + com.alradhy.discoverylab.LabCatalog.col(0).map { it.substringBefore(" • ") }
     private fun suggestedMuseumLabIndex(): Int =
         getCurrentList().getOrNull(currentIndex)?.lab ?: -1
     // Jumps to the next station the visitor has not opened yet (this category first, then the other one).
@@ -975,7 +975,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             "🔬 جرّب فوانيس غاليليو بنفسك"
         else if (relatedLab >= 0)
             "🔬 جرّب بنفسك: " + museumLabNames[relatedLab]
-        else "🔬 افتح متحف العلوم: 15 تجربة تفاعلية"
+        else "🔬 افتح متحف العلوم: 50 تجربة تفاعلية"
         summaryText.text = item.summary
 
         factsContainer.removeAllViews()

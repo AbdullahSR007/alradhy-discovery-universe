@@ -37,7 +37,7 @@ public final class ScienceLabsActivity extends Activity {
     private static final int MUTED=Color.rgb(158,186,212), CYAN=Color.rgb(81,219,237);
     private static final int ORANGE=Color.rgb(255,143,92), GREEN=Color.rgb(113,221,163);
     private static final double C=299792458, G=9.80665, AU=149597870700.0;
-    private static final String[] NAMES={
+    private static final String[] NAMES0={
         "نيوتن • تحليل الضوء بالمنشور", "فوكو • دوران الأرض بالبندول",
         "كولوم • القوة الكهربائية", "نيوتن • المدفع المداري",
         "يونغ • تداخل الضوء", "أرخميدس • الطفو",
@@ -45,19 +45,19 @@ public final class ScienceLabsActivity extends Activity {
         "كبلر • المدارات الإهليلجية", "دوبلر • الموجات الصوتية",
         "غاليليو • زمن البندول", "أينشتاين • التأثير الكهروضوئي"
     };
-    private static final String[] A_LABEL={
+    private static final String[] A_LABEL0={
         "زاوية رأس المنشور (درجة)", "خط العرض (درجة)", "الشحنة الأولى q1 (ميكروكولوم؛ السالب يسار الصفر)",
         "الارتفاع عن الأرض (كم)", "الطول الموجي (نانومتر)", "كثافة السائل (كغ/م³)",
         "سعة تغير المجال (تسلا)", "فرق الجهد (فولت)", "نصف المحور الأكبر (AU)",
         "تردد المصدر (هرتز)", "طول الخيط (متر)", "الطول الموجي (نانومتر)"
     };
-    private static final String[] B_LABEL={
+    private static final String[] B_LABEL0={
         "بعد الشاشة (متر)", "الزمن المنقضي (ساعة)", "المسافة (متر)",
         "السرعة الأفقية (كم/ث)", "فاصل الشقين (مم)", "كثافة الجسم (كغ/م³)",
         "تردد المجال (هرتز)", "المقاومة (أوم)", "الاختلاف المركزي e",
         "سرعة الاقتراب (م/ث)", "الجاذبية (م/ث²)", "دالة شغل المادة (eV)"
     };
-    private static final String[] LIMITS={
+    private static final String[] LIMITS0={
         "المنشور من زجاج BK7، واستُخدمت صيغة الانحراف الأصغر؛ أهملنا امتصاص الزجاج والتشتت داخل الحزمة.",
         "معدل سبق بندول فوكو 15.041 درجة/ساعة × جيب خط العرض؛ نموذج مثالي يتجاهل الاحتكاك.",
         "قانون كولوم لشحنتين نقطيتين ساكنتين في الفراغ. تقدر تغيّر مقدار وإشارة كل شحنة والمسافة بينهما.",
@@ -71,7 +71,7 @@ public final class ScienceLabsActivity extends Activity {
         "تقدير الفترة في تقريب الزاوية الصغيرة وبندول نقطي بلا احتكاك. يختلف عند السعات الكبيرة.",
         "انبعاث إلكترون فقط إذا تجاوزت طاقة الفوتون دالة الشغل؛ لا يحدد النموذج عدد الإلكترونات."
     };
-    private static final String[] CHALLENGES={
+    private static final String[] CHALLENGES0={
         "ارفع زاوية المنشور: هل يزيد الفصل بين الأحمر والأزرق؟",
         "ضع خط العرض عند الصفر، ثم عند القطب: كيف يتغيّر سبق البندول؟",
         "جرّب (+,+) ثم (+,−) ثم (−,−). اضغط الصفر، وبعدها غيّر المسافة وراقب مقدار القوة واتجاهها.",
@@ -92,7 +92,7 @@ public final class ScienceLabsActivity extends Activity {
     private static final int[] A_INIT=PhysicsModels.A_INIT;
     private static final int[] B_INIT=PhysicsModels.B_INIT;
 
-    private static final String[] HISTORY = {
+    private static final String[] HISTORY0={
         "1666: استخدم نيوتن منشورًا لتوضيح أن الضوء الأبيض يحمل ألوانًا مختلفة.",
         "1851: عرض فوكو بندولًا طويلًا في باريس لإظهار دوران الأرض.",
         "1785: استخدم شارل كولوم ميزان الالتواء لدراسة القوى بين الشحنات.",
@@ -106,7 +106,7 @@ public final class ScienceLabsActivity extends Activity {
         "القرن السابع عشر: درس غاليليو علاقة طول البندول وزمن تأرجحه.",
         "1905: فسّر أينشتاين التأثير الكهروضوئي بكمّات من الضوء."
     };
-    private static final String[] APPLICATIONS = {
+    private static final String[] APPLICATIONS0={
         "اليوم: المبددات الطيفية، المطياف، تحليل الضوء في المختبرات والاتصالات البصرية.",
         "اليوم: أنظمة مرجعية للحركة ودروس في فيزياء الأرض وأجهزة قياس دقيقة.",
         "اليوم: تصميم الحساسات الكهروستاتيكية وفهم سلوك الشحنات في الأجهزة.",
@@ -120,7 +120,7 @@ public final class ScienceLabsActivity extends Activity {
         "اليوم: الساعات الميكانيكية وحساسات الاهتزاز والتجارب التعليمية.",
         "اليوم: الكواشف الضوئية والخلايا الشمسية وحساسات الكاميرات."
     };
-    private static final String[] INSIGHT = {
+    private static final String[] INSIGHT0={
         "يرتبط معامل انكسار الزجاج بالطول الموجي؛ لذلك ينحرف الأزرق والأحمر بزاويتين مختلفتين.",
         "معدل دوران مستوى تأرجح بندول فوكو يتناسب مع جيب خط العرض. عند خط الاستواء لا يدور بالنسبة إلى الأرض بهذا النموذج.",
         "عند ثبات الشحنتين، مضاعفة المسافة تُقلّل مقدار القوة إلى الربع. الإشارة تحدد تجاذبًا أم تنافرًا.",
@@ -134,25 +134,36 @@ public final class ScienceLabsActivity extends Activity {
         "يزداد زمن الدورة مع الجذر التربيعي لطول الخيط، ويقل بزيادة الجاذبية.",
         "ينبعث إلكترون فقط إذا كانت طاقة الفوتون أكبر من دالة الشغل، لا بمجرد زيادة سطوع الضوء."
     };
-    private static final String[] GRAPH_LABEL = {
+    private static final String[] GRAPH_LABEL0={
         "فصل اللونين (سم)", "سبق البندول (درجة/ساعة)", "القوة الموقّعة (نيوتن)",
         "السرعة الدائرية (كم/ث)", "مسافة الأهداب (مم)", "قوة الطفو (نيوتن)",
         "أقصى جهد مستحث (فولت)", "التيار (أمبير)", "زمن المدار (سنة)",
         "التردد المسموع (هرتز)", "الدورة (ثانية)", "طاقة الإلكترون (eV)"
     };
+    private static final int N=PhysicsModels.COUNT;
+    private static String[] join(String[] a,String[] b){String[] r=new String[a.length+b.length];System.arraycopy(a,0,r,0,a.length);System.arraycopy(b,0,r,a.length,b.length);return r;}
+    private static final String[] NAMES=join(NAMES0,LabCatalog.col(0));
+    private static final String[] A_LABEL=join(A_LABEL0,LabCatalog.col(1));
+    private static final String[] B_LABEL=join(B_LABEL0,LabCatalog.col(2));
+    private static final String[] GRAPH_LABEL=join(GRAPH_LABEL0,LabCatalog.col(3));
+    private static final String[] LIMITS=join(LIMITS0,LabCatalog.col(4));
+    private static final String[] CHALLENGES=join(CHALLENGES0,LabCatalog.col(5));
+    private static final String[] HISTORY=join(HISTORY0,LabCatalog.col(6));
+    private static final String[] APPLICATIONS=join(APPLICATIONS0,LabCatalog.col(7));
+    private static final String[] INSIGHT=join(INSIGHT0,LabCatalog.col(8));
     private final int[] aProgress=A_INIT.clone(), bProgress=B_INIT.clone();
-    private final boolean[] done=new boolean[12];
+    private final boolean[] done=new boolean[N];
     private boolean guided=true, showExplanation=false, showGraph=false;
     private int guideStep=0, currentFocus=0;
-    private double[] savedA=new double[12],savedB=new double[12],savedQ2=new double[12];
-    private boolean[] hasSaved=new boolean[12];
+    private double[] savedA=new double[N],savedB=new double[N],savedQ2=new double[N];
+    private boolean[] hasSaved=new boolean[N];
     private SharedPreferences storage;
     private TextView guideText, compareText;
     private LabGraphView graphView;
     private SeekBar firstSlider,secondSlider;
     private ScrollView scrolling;
     private int learningCredits=0;
-    private final int[] predicted=new int[12], predActual=new int[12];
+    private final int[] predicted=new int[N], predActual=new int[N];
     private TextView statusText;
     private LinearLayout pane;
     private ScrollView scrollingRight;
@@ -176,7 +187,7 @@ public final class ScienceLabsActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(
             View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
         storage=getSharedPreferences("alradhy_discovery_museum_v05",MODE_PRIVATE);
-        for(int i=0;i<12;i++){
+        for(int i=0;i<N;i++){
             aProgress[i]=storage.getInt("a_"+i,A_INIT[i]);
             bProgress[i]=storage.getInt("b_"+i,B_INIT[i]);
             savedA[i]=storage.getFloat("compare_a_"+i,0);
@@ -193,11 +204,11 @@ public final class ScienceLabsActivity extends Activity {
         secondChargeMicroCoulombs=storage.getFloat("q2",2f);
         if(state==null && getIntent()!=null)
             selected=getIntent().getIntExtra("labIndex",-1);
-        if(selected < -1 || selected >= 12) selected=-1;
+        if(selected < -1 || selected >= N) selected=-1;
         if(state!=null){selected=state.getInt("selected",-1);
             int[] ap=state.getIntArray("a"),bp=state.getIntArray("b");
-            if(ap!=null&&ap.length==12) System.arraycopy(ap,0,aProgress,0,12);
-            if(bp!=null&&bp.length==12) System.arraycopy(bp,0,bProgress,0,12);
+            if(ap!=null&&ap.length==N) System.arraycopy(ap,0,aProgress,0,N);
+            if(bp!=null&&bp.length==N) System.arraycopy(bp,0,bProgress,0,N);
             secondChargeMicroCoulombs=state.getDouble("charge2",2.0);
             guided=state.getBoolean("guided",guided);
             showGraph=state.getBoolean("showGraph",showGraph);
@@ -259,7 +270,7 @@ public final class ScienceLabsActivity extends Activity {
     private void persistNow() {
         if(storage==null)return;
         SharedPreferences.Editor e=storage.edit();
-        for(int i=0;i<12;i++){
+        for(int i=0;i<N;i++){
             e.putInt("a_"+i,aProgress[i]).putInt("b_"+i,bProgress[i]);
             e.putBoolean("done_"+i,done[i]);
             e.putInt("pred_"+i,predicted[i]).putInt("predact_"+i,predActual[i]);
@@ -375,14 +386,14 @@ public final class ScienceLabsActivity extends Activity {
             both.addView(sc2,new LinearLayout.LayoutParams(0,-1,1.15f));
             setContentView(both);
         } else setContentView(sc);
-        line("ALRADHY DISCOVERY • متحف العلوم التفاعلي V0.6  •  15 مختبرًا",18,GOLD);
+        line("ALRADHY DISCOVERY • متحف العلوم التفاعلي V0.6  •  "+(N+3)+" مختبرًا",18,GOLD);
         if(selected<0){renderHub();afterRender(keep,keepY,keepY2,keepSeq);return;}
         final int i=selected;
-        line("المختبر "+(i+4)+" من 15  •  "+NAMES[i],27,WHITE);
+        line("المختبر "+(i+4)+" من "+(N+3)+"  •  "+NAMES[i],27,WHITE);
         row(new String[]{"🏛️ المختبرات","◀ السابق","التالي ▶"},new Runnable[]{
             ()->{selected=-1;render();},
-            ()->goLab((selected+11)%12),
-            ()->goLab((selected+1)%12)
+            ()->goLab((selected+N-1)%N),
+            ()->goLab((selected+1)%N)
         });
         row(new String[]{guided?"☑ تعلّم معي (اضغط للاستكشاف الحر)":"□ تعلّم معي",guided?"⟲ إعادة ضبط":"⟲ إعادة ضبط"},new Runnable[]{
             ()->{guided=!guided;persist();refresh();},
@@ -489,26 +500,33 @@ public final class ScienceLabsActivity extends Activity {
     private String tile(int k){return (done[k]?"✅ ":"")+(k+4)+". "+NAMES[k].replace(" • ","\n");}
     private void renderHub(){
         int completed=0;for(boolean d:done)if(d)completed++;
-        final int total=completed+lightDone(0)+lightDone(1)+lightDone(2);
+        final int total=completed+lightDone(0)+lightDone(1)+lightDone(2);final int all=N+3;
         line("اختر مختبرًا، أو ابدأ بالتعلّم الموجّه: توقّع، جرّب، قارن، ثم افهم السبب. تقدّمك يُحفظ تلقائيًا.",23,WHITE);
-        line("⭐ مكتمل: "+total+" من 15 مختبرًا   •   نقاط الاستكشاف: "+learningCredits,18,GREEN);
+        line("⭐ مكتمل: "+total+" من "+(N+3)+" مختبرًا   •   نقاط الاستكشاف: "+learningCredits,18,GREEN);
         LinearLayout meter=new LinearLayout(this);meter.setOrientation(LinearLayout.HORIZONTAL);
         View fill=new View(this);fill.setBackgroundColor(GREEN);
         View rest=new View(this);rest.setBackgroundColor(Color.rgb(55,89,128));
         meter.addView(fill,new LinearLayout.LayoutParams(0,dp(8),total));
-        meter.addView(rest,new LinearLayout.LayoutParams(0,dp(8),15-total));
+        meter.addView(rest,new LinearLayout.LayoutParams(0,dp(8),Math.max(0,all-total)));
         LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,dp(8));mp.bottomMargin=dp(18);page.addView(meter,mp);
         line("المختبرات الأصلية • قياس سرعة الضوء",22,GOLD);
         row(new String[]{(lightDone(0)>0?"✅ ":"")+"غاليليو • الفوانيس",(lightDone(1)>0?"✅ ":"")+"رومر • خسوف آيو",(lightDone(2)>0?"✅ ":"")+"فيزو • العجلة"},new Runnable[]{
             ()->openOriginal("galileo"),()->openOriginal("romer"),()->openOriginal("fizeau")
         },68);
-        line("12 مختبرًا تفاعليًا جديدًا",23,GOLD);
-        for(int k=0;k<12;k+=3){
-            final int x=k,y=k+1,z=k+2;
-            row(new String[]{tile(x),tile(y),tile(z)},new Runnable[]{()->goLab(x),()->goLab(y),()->goLab(z)},82);
-        }
+        section("أساسيات الفيزياء • 12 مختبرًا",0,12);
+        section("🧲 فيزياء متقدمة • 11 مختبرًا",12,23);
+        section("🔭 الفلك والكونيات • 12 مختبرًا",23,35);
+        section("📡 علم الاتصالات • 12 مختبرًا",35,47);
         line("جميع النماذج تعمل دون إنترنت. المخرجات حسابات فيزيائية مبسطة، وليست بيانات من أجهزة قياس حقيقية.",17,MUTED);
-        addButton("العودة إلى رحلة المحطات الخمسين",()->finish());
+        addButton("العودة إلى رحلة المحطات",()->finish());
+    }
+    private void section(String title,int from,int to){
+        line(title,23,GOLD);
+        for(int k=from;k<to;k+=3){
+            int cnt=Math.min(3,to-k);String[] ls=new String[cnt];Runnable[] rs=new Runnable[cnt];
+            for(int j=0;j<cnt;j++){final int idx=k+j;ls[j]=tile(idx);rs[j]=()->goLab(idx);}
+            row(ls,rs,82);
+        }
     }
     private void openOriginal(String id){
         Intent t=new Intent(this,LightLabsActivity.class);t.putExtra("experiment",id);startActivity(t);
@@ -553,8 +571,8 @@ public final class ScienceLabsActivity extends Activity {
     private void update(){
         if(selected<0||result==null)return;
         int i=selected;double x=a(),y=b();
-        if(aValue!=null)aValue.setText(A_LABEL[i]+": "+n(x,(i==3||i==5||i==8||i==9||i==11)?1:2));
-        if(bValue!=null)bValue.setText(B_LABEL[i]+": "+n(y,(i==1||i==5||i==7||i==9)?1:2));
+        if(aValue!=null)aValue.setText(A_LABEL[i]+": "+n(x,PhysicsModels.A_DEC[i]));
+        if(bValue!=null)bValue.setText(B_LABEL[i]+": "+n(y,PhysicsModels.B_DEC[i]));
         String out="";
         switch(i){
             case 0:{
@@ -622,6 +640,8 @@ public final class ScienceLabsActivity extends Activity {
                 out="طاقة الفوتون: "+n(ev,3)+" eV   |   حد الانبعاث: "+n(1239.841984/y,1)+" نانومتر\n"+
                     (energy>0?"ينبعث إلكترون؛ أقصى طاقة حركية "+n(energy,3)+" eV":"لا انبعاث كهروضوئي عند هذا الطول الموجي");break;
             }
+            default:
+                if(i>=12)out=LabCatalog.D[i-12].r_(x,y);
         }
         result.setText(out);
         if(drawing!=null)drawing.invalidate();
@@ -913,10 +933,12 @@ public final class ScienceLabsActivity extends Activity {
                     else caption(c,"NO ELECTRONS",644,210,ORANGE,25);
                     caption(c,"hν = "+n(1239.841984/x,2)+" eV",90,80,GOLD,22);break;
                 }
+                default:
+                    if(i>=12)NewLabArt.draw(c,i-12,x,y,aProgress[i]/100.0,bProgress[i]/100.0,t);
             }
             actual.restore();
             // Only animate experiments whose picture changes with time.
-            if(i==1||i==9||i==10)postInvalidateDelayed(40);
+            if(i==1||i==9||i==10||i>=12)postInvalidateDelayed(40);
         }
     }
 }
