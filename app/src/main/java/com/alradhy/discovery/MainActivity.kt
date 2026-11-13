@@ -57,9 +57,11 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var tabCosmosBtn: TextView
     private lateinit var experimentButton: TextView
     private lateinit var brandHeader: TextView
+    private lateinit var nextPreview: TextView
+    private lateinit var infoCardView: LinearLayout
 
     // ==================== 25 HISTORY & SCIENCE STATIONS ====================
-    private val historyStations = listOf(
+    private val baseHistory = listOf(
         DiscoveryItem(
             "[ 3200 ق.م ]", "بلاد الرافدين وابتكار الكتابة", "سومر وبابل — فجر التدوين والنظام الستيني", "النطاق: العراق القديم",
             "ابتكر السومريون والبابليون الكتابة المسمارية على الألواح الطينية، وأسسوا النظام الحسابي الستيني (60) الذي لا نزال نقسم به الساعة إلى 60 دقيقة والدائرة إلى 360 درجة حتى اليوم.",
@@ -243,7 +245,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
 
     // ==================== 25 COSMIC SCALE STATIONS ====================
-    private val cosmicStations = listOf(
+    private val baseCosmic = listOf(
         DiscoveryItem(
             "[ 10⁻³⁵ م ]", "طول بلانك والنسيج الكمومي", "أصغر وحدة مسافة ذات معنى في الفيزياء", "المقياس: 0.00000000000000000000000000000000001 متر",
             "عند هذا المقياس المتناهي الصغر تتلاشى الهندسة الملساء للمكان، ويظهر ما يسميه الفيزيائيون (الرغوة الكمومية Quantum Foam) حيث تتلاطم تقلبات الطاقة والزمكان في حدود الفيزياء المعروفة.",
@@ -426,6 +428,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         )
     )
 
+    private val historyStations: List<DiscoveryItem> by lazy { ExtraStations.mergeHistory(baseHistory) }
+    private val cosmicStations: List<DiscoveryItem> by lazy { ExtraStations.mergeCosmic(baseCosmic) }
+    private val totalStations: Int get() = historyStations.size + cosmicStations.size
+
+    private fun stationKey(cat: Int, item: DiscoveryItem) = "${cat}_${item.title.hashCode()}"
+    private fun isSeen(cat: Int, i: Int): Boolean {
+        val item = (if (cat == 0) historyStations else cosmicStations).getOrNull(i) ?: return false
+        return progress.getBoolean("seen_" + stationKey(cat, item), false)
+    }
+    private fun isMastered(cat: Int, i: Int): Boolean {
+        val item = (if (cat == 0) historyStations else cosmicStations).getOrNull(i) ?: return false
+        return progress.getBoolean("quiz_" + stationKey(cat, item), false)
+    }
+    private fun isGalileo(cat: Int, i: Int) = cat == 0 && historyStations.getOrNull(i)?.title?.contains("غاليليو") == true
+    private val accentPalette = arrayOf("#FFD54F", "#00E5FF", "#C084FC", "#46C8A0", "#FF8A65", "#7DD3FC", "#F472B6", "#A3E635")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
@@ -437,7 +455,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         buildDashboardUI()
         val savedCategory = progress.getInt("category", 0).coerceIn(0, 1)
-        val savedStation = progress.getInt("station", 0).coerceIn(0, 24)
+        val savedStation = progress.getInt("station", 0).coerceIn(0, 34)
         selectCategory(savedCategory)
         selectStation(savedStation)
     }
@@ -529,7 +547,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         val brandTitle = TextView(this).apply {
             brandHeader = this
-            text = "🌌 ALRADHY DISCOVERY  [ 50 محطة ]"
+            text = "🌌 ALRADHY DISCOVERY"
             setTextColor(Color.parseColor("#00E5FF"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
             typeface = Typeface.DEFAULT_BOLD
@@ -537,7 +555,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(brandTitle, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
         val indexBtn = TextView(this).apply {
-            text = "📋 فهرس الـ 50 محطة"
+            text = "📋 فهرس الـ ${historyStations.size + cosmicStations.size} محطة"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -565,7 +583,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(discoveryLabButton, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         tabTimeBtn = TextView(this).apply {
-            text = "🌍 آلة الزمن (25)"
+            text = "🌍 آلة الزمن (${historyStations.size})"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -579,7 +597,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(tabTimeBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         tabCosmosBtn = TextView(this).apply {
-            text = "🔭 مقياس الكون (25)"
+            text = "🔭 مقياس الكون (${cosmicStations.size})"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
@@ -618,6 +636,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             setPadding(dp(20), dp(14), dp(20), dp(14))
         }
 
+        infoCardView = infoCard
         badgeText = TextView(this).apply {
             setTextColor(Color.parseColor("#FFD54F"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
@@ -649,7 +668,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             gravity = Gravity.CENTER
             styleInteractiveButton(this, "#16402F", "#46C8A0")
             setOnClickListener {
-                if (currentCategory == 0 && currentIndex == 16) {
+                if (isGalileo(currentCategory, currentIndex)) {
                     val intent = Intent(this@MainActivity, com.alradhy.discoverylab.LightLabsActivity::class.java)
                     intent.putExtra("experiment", "galileo")
                     startActivity(intent)
@@ -693,6 +712,18 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         infoScroll.addView(scrollInner)
         infoCard.addView(infoScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        nextPreview = TextView(this).apply {
+            setTextColor(Color.parseColor("#FFD54F"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            styleInteractiveButton(this, "#1B1730", "#FFD54F")
+            setOnClickListener { selectStation((currentIndex + 1) % getCurrentList().size) }
+        }
+        infoCard.addView(nextPreview, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply { topMargin = dp(8) })
         val labCaption = TextView(this).apply {
             text = "🧪 تجربة مرتبطة بهذه المحطة — غيّر المتغيرات بنفسك وشاهد النتيجة"
             setTextColor(Color.parseColor("#7DD3B0"))
@@ -867,23 +898,22 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
     private fun suggestedMuseumLabIndex(): Int =
         getCurrentList().getOrNull(currentIndex)?.lab ?: -1
-    private fun isSeen(cat: Int, i: Int) = progress.getBoolean("seen_${cat}_$i", false)
-
     // Jumps to the next station the visitor has not opened yet (this category first, then the other one).
     private fun discoverNewStation() {
-        for (step in 1..25) {
-            val i = (currentIndex + step) % 25
+        val curSize = getCurrentList().size
+        for (step in 1..curSize) {
+            val i = (currentIndex + step) % curSize
             if (!isSeen(currentCategory, i)) { selectStation(i); return }
         }
         val other = 1 - currentCategory
-        for (i in 0 until 25) {
+        for (i in 0 until (if (other == 0) historyStations.size else cosmicStations.size)) {
             if (!isSeen(other, i)) {
                 selectCategory(other)
                 selectStation(i)
                 return
             }
         }
-        android.widget.Toast.makeText(this, "🎉 أنهيت جولة المتحف كاملة: 50 من 50", android.widget.Toast.LENGTH_LONG).show()
+        android.widget.Toast.makeText(this, "🎉 أنهيت جولة المتحف كاملة: $totalStations من $totalStations", android.widget.Toast.LENGTH_LONG).show()
     }
 
     private fun getCurrentList(): List<DiscoveryItem> {
@@ -906,7 +936,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         stationRow.removeAllViews()
         val list = getCurrentList()
         list.forEachIndexed { idx, item ->
-            val globalNumber = if (cat == 0) (idx + 1) else (idx + 26)
+            val globalNumber = if (cat == 0) (idx + 1) else (idx + 1 + historyStations.size)
             val btn = TextView(this).apply {
                 text = "[$globalNumber] ${item.badge} ${item.title}"
                 tag = text.toString()
@@ -933,15 +963,15 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val list = getCurrentList()
         if (index !in list.indices) return
         currentIndex = index
-        progress.edit().putInt("category", currentCategory).putInt("station", index).putBoolean("seen_${currentCategory}_$index", true).apply()
         val item = list[index]
-        val globalNumber = if (currentCategory == 0) (index + 1) else (index + 26)
+        progress.edit().putInt("category", currentCategory).putInt("station", index).putBoolean("seen_" + stationKey(currentCategory, item), true).apply()
+        val globalNumber = if (currentCategory == 0) (index + 1) else (index + 1 + historyStations.size)
 
-        badgeText.text = "محطة [ $globalNumber / 50 ]  •  ${item.badge}  •  ${item.region}"
+        badgeText.text = "محطة [ $globalNumber / $totalStations ]  •  ${item.badge}  •  ${item.region}"
         titleText.text = item.title
         subtitleText.text = item.subtitle
         val relatedLab = suggestedMuseumLabIndex()
-        experimentButton.text = if (currentCategory == 0 && index == 16)
+        experimentButton.text = if (isGalileo(currentCategory, index))
             "🔬 جرّب فوانيس غاليليو بنفسك"
         else if (relatedLab >= 0)
             "🔬 جرّب بنفسك: " + museumLabNames[relatedLab]
@@ -966,7 +996,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         for (i in 0 until stationRow.childCount) {
             val child = stationRow.getChildAt(i) as? TextView ?: continue
             val baseText = child.tag as? String ?: child.text.toString().removePrefix("✓ ")
-            child.text = if (progress.getBoolean("seen_${currentCategory}_$i", false)) "✓ $baseText" else baseText
+            child.text = if (isMastered(currentCategory, i)) "⭐ $baseText" else if (isSeen(currentCategory, i)) "✓ $baseText" else baseText
             if (i == index) {
                 child.setTextColor(Color.parseColor("#FFD54F"))
                 child.typeface = Typeface.DEFAULT_BOLD
@@ -980,34 +1010,47 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         var explored = 0
-        for (c in 0..1) for (s in 0..24) if (progress.getBoolean("seen_${c}_$s", false)) explored++
-        val filled = explored * 10 / 50
-        val bar = "▰".repeat(filled) + "▱".repeat(10 - filled)
-        brandHeader.text = "🌌 ALRADHY DISCOVERY   $bar  $explored / 50"
+        var mastered = 0
+        for (c in 0..1) for (s in 0 until (if (c == 0) historyStations.size else cosmicStations.size)) {
+            if (isSeen(c, s)) explored++
+            if (isMastered(c, s)) mastered++
+        }
+        val accent = accentPalette[(index + currentCategory * 3) % accentPalette.size]
+        infoCardView.background = makeRoundedBox("#D90B1328", accent, 3, 16)
+        badgeText.setTextColor(Color.parseColor(accent))
+        titleText.setTextColor(Color.parseColor(accent))
+        run {
+            val l = getCurrentList()
+            val n = l[(index + 1) % l.size]
+            val seenMark = if (isSeen(currentCategory, (index + 1) % l.size)) "✓ " else ""
+            nextPreview.text = "⬅️ المحطة التالية: $seenMark${n.badge} ${n.title}"
+        }
+        val filled = if (explored == 0) 0 else maxOf(1, explored * 20 / totalStations)
+        val bar = "█".repeat(filled) + "░".repeat(20 - filled)
+        brandHeader.text = "🌌 ALRADHY DISCOVERY   $bar  $explored / $totalStations   ⭐ $mastered"
         universeCanvas.category = currentCategory
         universeCanvas.stationIndex = index
         universeCanvas.visualType = item.visualType
     }
 
     private fun showAll50IndexDialog() {
-        val allTitles = Array(50) { i ->
-            if (i < 25) {
-                val it = historyStations[i]
-                "🌍 [${i + 1}/50] ${it.badge} — ${it.title}"
-            } else {
-                val it = cosmicStations[i - 25]
-                "🔭 [${i + 1}/50] ${it.badge} — ${it.title}"
-            }
+        val hs = historyStations.size
+        val allTitles = Array(totalStations) { i ->
+            val cat = if (i < hs) 0 else 1
+            val idx = if (i < hs) i else i - hs
+            val it = if (cat == 0) historyStations[idx] else cosmicStations[idx]
+            val mark = if (isMastered(cat, idx)) "⭐ " else if (isSeen(cat, idx)) "✓ " else ""
+            (if (cat == 0) "🌍 " else "🔭 ") + "[${i + 1}/$totalStations] $mark${it.badge} — ${it.title}"
         }
         val builder = AlertDialog.Builder(this)
-        builder.setTitle("📋 الفهرس الشامل (50 محطة تفاعلية — اختر للانتقال الفوري)")
+        builder.setTitle("📋 الفهرس الشامل ($totalStations محطة — اختر للانتقال الفوري)")
         builder.setItems(allTitles) { dialog, which ->
-            if (which < 25) {
+            if (which < hs) {
                 if (currentCategory != 0) selectCategory(0)
                 selectStation(which)
             } else {
                 if (currentCategory != 1) selectCategory(1)
-                selectStation(which - 25)
+                selectStation(which - hs)
             }
             dialog.dismiss()
         }
@@ -1034,7 +1077,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         builder.setItems(optionsArray) { dialog, which ->
             if (which == item.correctIndex) {
                 playClickSound(ToneGenerator.TONE_PROP_ACK)
-                Toast.makeText(this, "✅ إجابة صحيحة! أحسنت يا بطل المعرفة", Toast.LENGTH_LONG).show()
+                progress.edit().putBoolean("quiz_" + stationKey(currentCategory, item), true).apply()
+                Toast.makeText(this, "✅ إجابة صحيحة! حصلت على ⭐ لهذه المحطة", Toast.LENGTH_LONG).show()
+                selectStation(currentIndex)
             } else {
                 playClickSound(ToneGenerator.TONE_PROP_NACK)
                 Toast.makeText(this, "❌ إجابة غير دقيقة، الصواب: ${item.quizOptions[item.correctIndex]}", Toast.LENGTH_LONG).show()
