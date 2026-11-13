@@ -27,7 +27,7 @@ import java.util.Locale;
  * ALRADHY Discovery Fusion - integrated native Fizeau laboratory.
  * No network, storage access, root, services, or dependencies required.
  */
-public final class MainActivity extends Activity {
+public final class LightLabsActivity extends Activity {
     private static final int BG = Color.rgb(7, 15, 29);
     private static final int PANEL = Color.rgb(16, 31, 54);
     private static final int GOLD = Color.rgb(244, 191, 91);
@@ -330,8 +330,8 @@ public final class MainActivity extends Activity {
         galileoView.setBackground(shape(PANEL, Color.rgb(62, 89, 120)));
         galileoView.setFocusable(true);
         galileoView.setOnTouchListener((v,e)->{
-            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=galileoDistanceMeters;return true;}
-            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+            if(e.getAction()==MotionEvent.ACTION_DOWN){v.getParent().requestDisallowInterceptTouchEvent(true);dragStartX=e.getX();originalStart=galileoDistanceMeters;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){if(e.getAction()==MotionEvent.ACTION_UP)v.getParent().requestDisallowInterceptTouchEvent(false);
                 galileoDistanceMeters=Math.max(500,Math.min(10000,
                     500*Math.round((originalStart+(e.getX()-dragStartX)*7000/Math.max(1,v.getWidth()))/500f)));
                 galileoFired=false;updateGalileo();return true;
@@ -394,8 +394,8 @@ public final class MainActivity extends Activity {
         roemerView = new RoemerView();
         roemerView.setFocusable(true);
         roemerView.setOnTouchListener((v,e)->{
-            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=romerEarthPosition;return true;}
-            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+            if(e.getAction()==MotionEvent.ACTION_DOWN){v.getParent().requestDisallowInterceptTouchEvent(true);dragStartX=e.getX();originalStart=romerEarthPosition;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){if(e.getAction()==MotionEvent.ACTION_UP)v.getParent().requestDisallowInterceptTouchEvent(false);
                 romerEarthPosition=Math.max(0,Math.min(8,Math.round(originalStart+
                     (e.getX()-dragStartX)*8/Math.max(1,v.getWidth()))));
                 romerObserved=false;updateRoemer();return true;
@@ -453,7 +453,7 @@ public final class MainActivity extends Activity {
 
     private final class GalileoView extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        GalileoView(){super(MainActivity.this);}
+        GalileoView(){super(LightLabsActivity.this);}
         @Override protected void onDraw(Canvas c){
             super.onDraw(c);
             float w=getWidth(),h=getHeight(),y=h*.65f;
@@ -491,7 +491,7 @@ public final class MainActivity extends Activity {
 
     private final class RoemerView extends View {
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        RoemerView(){super(MainActivity.this);}
+        RoemerView(){super(LightLabsActivity.this);}
         @Override protected void onDraw(Canvas c){
             super.onDraw(c);
             float w=getWidth(),h=getHeight(); if(w<=0||h<=0)return;
@@ -528,8 +528,8 @@ public final class MainActivity extends Activity {
         labView = new LightLabView();
         labView.setFocusable(true);
         labView.setOnTouchListener((v,e)->{
-            if(e.getAction()==MotionEvent.ACTION_DOWN){dragStartX=e.getX();originalStart=rpm;return true;}
-            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){
+            if(e.getAction()==MotionEvent.ACTION_DOWN){v.getParent().requestDisallowInterceptTouchEvent(true);dragStartX=e.getX();originalStart=rpm;return true;}
+            if(e.getAction()==MotionEvent.ACTION_MOVE||e.getAction()==MotionEvent.ACTION_UP){if(e.getAction()==MotionEvent.ACTION_UP)v.getParent().requestDisallowInterceptTouchEvent(false);
                 rpm=Math.max(0,Math.min(1400,Math.round(originalStart+
                     (e.getX()-dragStartX)*1400/Math.max(1,v.getWidth()))));
                 updateReadout();return true;
@@ -596,7 +596,7 @@ public final class MainActivity extends Activity {
     }
     private final class LightLabView extends View {
         final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
-        LightLabView(){super(MainActivity.this);}
+        LightLabView(){super(LightLabsActivity.this);}
         void line(Canvas c,float x1,float y1,float x2,float y2,int color,float thick){
             p.setShader(null);p.setColor(color);p.setStrokeWidth(thick);
             c.drawLine(x1,y1,x2,y2,p);

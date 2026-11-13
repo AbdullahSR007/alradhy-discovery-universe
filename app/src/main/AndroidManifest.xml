@@ -18,7 +18,7 @@
             android:screenOrientation="landscape" />
 
         <activity
-            android:name="com.alradhy.discoverylab.MainActivity"
+            android:name="com.alradhy.discoverylab.LightLabsActivity"
             android:exported="false"
             android:screenOrientation="landscape" />
 

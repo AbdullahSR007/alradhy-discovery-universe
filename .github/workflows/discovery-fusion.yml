@@ -1,4 +1,4 @@
-name: Build ALRADHY Discovery Museum V0.5 APK
+name: Build ALRADHY Discovery Museum V0.6 APK
 
 on:
   push:
@@ -38,27 +38,54 @@ jobs:
           echo "$HOME/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
       - name: Verify physics equations and assumptions
         run: python3 scripts/check_science_models.py
+      - name: Verify the app's own physics code (javac)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pc"
+          javac -encoding UTF-8 -d "$RUNNER_TEMP/pc" app/src/main/java/com/alradhy/discoverylab/PhysicsModels.java scripts/PhysicsCheck.java
+          java -cp "$RUNNER_TEMP/pc" PhysicsCheck
+      - name: Prepare stable signing key (if secrets are configured)
+        shell: bash
+        env:
+          KS_B64: ${{ secrets.ALRADHY_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ALRADHY_KEYSTORE_PASSWORD }}
+          KS_ALIAS: ${{ secrets.ALRADHY_KEY_ALIAS }}
+          KS_KEYPASS: ${{ secrets.ALRADHY_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/alradhy.jks"
+            echo "ALRADHY_KEYSTORE_FILE=$RUNNER_TEMP/alradhy.jks" >> "$GITHUB_ENV"
+            echo "ALRADHY_KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
+            echo "ALRADHY_KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
+            echo "ALRADHY_KEY_PASSWORD=$KS_KEYPASS" >> "$GITHUB_ENV"
+            echo "Stable signing key found: this APK can update in place."
+          else
+            echo "::warning::No signing secrets: APK gets a random debug key and CANNOT update an installed copy."
+          fi
       - name: Build interactive museum APK
         run: gradle :app:assembleDebug --stacktrace --no-daemon
       - name: Verify and checksum APK
         shell: bash
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Museum-V05.apk
-          test -s ALRADHY-Discovery-Museum-V05.apk
-          sha256sum ALRADHY-Discovery-Museum-V05.apk
+          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Museum-V06.apk
+          test -s ALRADHY-Discovery-Museum-V06.apk
+          sha256sum ALRADHY-Discovery-Museum-V06.apk
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs ALRADHY-Discovery-Museum-V06.apk | grep -E "certificate (DN|SHA-256)"
       - name: Upload Fusion artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Museum-V05-APK
-          path: ALRADHY-Discovery-Museum-V05.apk
+          name: ALRADHY-Discovery-Museum-V06-APK
+          path: ALRADHY-Discovery-Museum-V06.apk
       - name: Publish Fusion preview prerelease
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "discovery-museum-v0.5.${{ github.run_number }}" ALRADHY-Discovery-Museum-V05.apk \
+          gh release create "discovery-museum-v0.6.${{ github.run_number }}" ALRADHY-Discovery-Museum-V06.apk \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Museum V0.5 - 15 Interactive Science Labs" \
-            --notes "Museum V0.5 preview: 15 physics labs, guided/discovery modes, comparison snapshots, 12 graphs, direct mouse/remote manipulation, history and modern uses, persisted progress. CI scientific sanity tests. New app ID protects older versions. Debug signed; device QA pending." \
+            --title "ALRADHY Discovery Museum V0.6 - 15 Interactive Science Labs" \
+            --notes "Museum V0.6: two-pane lab screen, recorded predictions with automatic challenge completion, smoother remote focus, faster saving and drawing, 15-lab hub with progress meter, stable station-to-lab links. Same application ID as V0.5; installs as an update only when the stable signing key secrets are configured. Device QA pending." \
             --prerelease

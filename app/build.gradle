@@ -11,11 +11,28 @@ android {
         applicationId "com.alradhy.discovery15labs.museumv05"
         minSdk 24
         targetSdk 34
-        versionCode 10
-        versionName "0.5.0-museum"
+        versionCode 11
+        versionName "0.6.0-museum"
+    }
+
+    // Stable signing: when the key is provided (CI secrets) every build carries the SAME
+    // certificate, which is what lets Android install a new APK as an update over the old one.
+    def stableKeystore = System.getenv("ALRADHY_KEYSTORE_FILE")
+    signingConfigs {
+        stable {
+            if (stableKeystore) {
+                storeFile file(stableKeystore)
+                storePassword System.getenv("ALRADHY_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("ALRADHY_KEY_ALIAS")
+                keyPassword System.getenv("ALRADHY_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
+        debug {
+            if (stableKeystore) signingConfig signingConfigs.stable
+        }
         release {
             minifyEnabled false
         }

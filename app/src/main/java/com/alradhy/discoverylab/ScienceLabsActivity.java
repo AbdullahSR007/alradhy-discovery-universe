@@ -11,15 +11,19 @@ import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.KeyEvent;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import java.util.Locale;
 
 /**
@@ -81,12 +85,12 @@ public final class ScienceLabsActivity extends Activity {
         "ضاعف طول الخيط تقريباً أربع مرات وقارن الفترة.",
         "ارفع طول الموجة حتى يتوقف انبعاث الإلكترونات."
     };
-    private static final double[] A_MIN={30,-80,-5,200,380,700,.1,1,.3,200,.2,250};
-    private static final double[] A_MAX={70,80,5,1500,750,1300,1.0,24,4,1200,3,800};
-    private static final double[] B_MIN={.5,0,.1,5, .1,500,.2,10,0,-120,1.6,1.5};
-    private static final double[] B_MAX={3,24,2,12,1,1500,4,500,.7,120,20,4};
-    private static final int[] A_INIT={50,72,70,25,35,50,50,50,30,50,40,40};
-    private static final int[] B_INIT={40,25,45,40,40,50,40,20,25,50,48,40};
+    private static final double[] A_MIN=PhysicsModels.A_MIN;
+    private static final double[] A_MAX=PhysicsModels.A_MAX;
+    private static final double[] B_MIN=PhysicsModels.B_MIN;
+    private static final double[] B_MAX=PhysicsModels.B_MAX;
+    private static final int[] A_INIT=PhysicsModels.A_INIT;
+    private static final int[] B_INIT=PhysicsModels.B_INIT;
 
     private static final String[] HISTORY = {
         "1666: استخدم نيوتن منشورًا لتوضيح أن الضوء الأبيض يحمل ألوانًا مختلفة.",
@@ -148,6 +152,15 @@ public final class ScienceLabsActivity extends Activity {
     private SeekBar firstSlider,secondSlider;
     private ScrollView scrolling;
     private int learningCredits=0;
+    private final int[] predicted=new int[12], predActual=new int[12];
+    private TextView statusText;
+    private LinearLayout pane;
+    private ScrollView scrollingRight;
+    private boolean keepView=false;
+    private int focusSeq=-1, btnSeq=0;
+    private final Handler saver=new Handler(Looper.getMainLooper());
+    private final Runnable saveNow=new Runnable(){@Override public void run(){persistNow();}};
+    private static final String[] TREND={"تزيد","تنقص","تبقى ثابتة"};
     // Coulomb lab: q1 is the signed A slider (-5 .. +5 µC);
     // q2 is independently adjustable, so both polarities can be explored.
     private double secondChargeMicroCoulombs=2.0;
@@ -171,6 +184,8 @@ public final class ScienceLabsActivity extends Activity {
             savedQ2[i]=storage.getFloat("compare_q2_"+i,2);
             hasSaved[i]=storage.getBoolean("compare_has_"+i,false);
             done[i]=storage.getBoolean("done_"+i,false);
+            predicted[i]=storage.getInt("pred_"+i,-1);
+            predActual[i]=storage.getInt("predact_"+i,-1);
         }
         guided=storage.getBoolean("guided",true);
         showGraph=storage.getBoolean("showGraph",false);
@@ -203,42 +218,51 @@ public final class ScienceLabsActivity extends Activity {
     @Override public void onBackPressed(){
         if(selected>=0){selected=-1;render();} else super.onBackPressed();
     }
+    @Override protected void onPause(){saver.removeCallbacks(saveNow);persistNow();super.onPause();}
+    private void refresh(){keepView=true;render();}
     private int dp(float x){return (int)(getResources().getDisplayMetrics().density*x+.5f);}
     private GradientDrawable shape(int color,int outline){
         GradientDrawable d=new GradientDrawable();d.setColor(color);d.setCornerRadius(dp(13));d.setStroke(dp(1),outline);return d;
     }
     private TextView text(String s,int size,int color){
-        TextView v=new TextView(this);v.setText(s);v.setTextColor(color);v.setTextSize(size);
+        TextView v=new TextView(this);v.setText(s);v.setTextColor(color);v.setTextSize(Math.max(size,17));
         v.setTextDirection(View.TEXT_DIRECTION_RTL);v.setGravity(Gravity.RIGHT|Gravity.CENTER_VERTICAL);
         v.setPadding(dp(6),dp(6),dp(6),dp(6));return v;
     }
-    private void line(String s,int size,int color){
+    private void line(String s,int size,int color){line(page,s,size,color);}
+    private void line(LinearLayout host,String s,int size,int color){
         TextView t=text(s,size,color);
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(10);page.addView(t,p);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(10);host.addView(t,p);
     }
     private Button button(String title,Runnable action){
-        Button b=new Button(this);b.setAllCaps(false);b.setText(title);b.setTextSize(17);b.setTextColor(WHITE);
+        Button b=new Button(this);final int seq=btnSeq++;b.setTag(seq);
+        b.setAllCaps(false);b.setText(title);b.setTextSize(17);b.setTextColor(WHITE);
         b.setBackground(shape(CARD,Color.rgb(55,89,128)));b.setMinimumHeight(dp(54));
         b.setOnFocusChangeListener((view,focus)->{
+            if(focus)focusSeq=seq;else if(focusSeq==seq)focusSeq=-1;
+            b.animate().scaleX(focus?1.05f:1f).scaleY(focus?1.05f:1f).setDuration(110).start();
             b.setTextColor(focus?Color.WHITE:WHITE);b.setBackground(shape(focus?Color.rgb(90,66,25):CARD,focus?GOLD:Color.rgb(55,89,128)));
         });b.setOnClickListener(v->action.run());return b;
     }
     private void addButton(String title,Runnable action){
         Button b=button(title,action);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(58));p.bottomMargin=dp(10);page.addView(b,p);
     }
-    private void row(String[] labels,Runnable[] actions){
-        LinearLayout bar=new LinearLayout(this);bar.setOrientation(LinearLayout.HORIZONTAL);
+    private void row(String[] labels,Runnable[] actions){row(labels,actions,59);}
+    private void row(String[] labels,Runnable[] actions,int heightDp){
+        LinearLayout bar=new LinearLayout(this);bar.setOrientation(LinearLayout.HORIZONTAL);bar.setClipChildren(false);
         for(int i=0;i<labels.length;i++){
-            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(59),1);
+            LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(heightDp),1);
             p.leftMargin=dp(4);p.rightMargin=dp(4);bar.addView(button(labels[i],actions[i]),p);
         }LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(14);page.addView(bar,p);
     }
-    private void persist() {
+    private void persist(){saver.removeCallbacks(saveNow);saver.postDelayed(saveNow,400);}
+    private void persistNow() {
         if(storage==null)return;
         SharedPreferences.Editor e=storage.edit();
         for(int i=0;i<12;i++){
             e.putInt("a_"+i,aProgress[i]).putInt("b_"+i,bProgress[i]);
             e.putBoolean("done_"+i,done[i]);
+            e.putInt("pred_"+i,predicted[i]).putInt("predact_"+i,predActual[i]);
             e.putBoolean("compare_has_"+i,hasSaved[i]);
             e.putFloat("compare_a_"+i,(float)savedA[i])
              .putFloat("compare_b_"+i,(float)savedB[i])
@@ -254,7 +278,7 @@ public final class ScienceLabsActivity extends Activity {
         bProgress[selected]=B_INIT[selected];
         if(selected==2)secondChargeMicroCoulombs=2;
         guideStep=0;showExplanation=false;
-        persist();render();
+        persist();refresh();
     }
     private void goLab(int index){
         selected=index;
@@ -263,18 +287,64 @@ public final class ScienceLabsActivity extends Activity {
     }
     private void stepProgress(boolean forward){
         guideStep=(guideStep+(forward?1:2))%3;
-        if(guideStep==2 && !done[selected]){
-            done[selected]=true;
-            learningCredits++;
-            persist();
-        }
-        render();
+        refresh();
     }
     private void saveComparison(){
         if(selected<0)return;
         hasSaved[selected]=true;savedA[selected]=a();savedB[selected]=b();
         savedQ2[selected]=secondChargeMicroCoulombs;
-        persist();updateComparison();
+        persist();updateComparison();checkAutoComplete();updateStatus();
+    }
+    private int trend(int i){
+        int pr=aProgress[i],q=pr<=90?pr+10:pr-10;
+        double v1=PhysicsModels.metric(i,value(A_MIN[i],A_MAX[i],pr),b(),secondChargeMicroCoulombs);
+        double v2=PhysicsModels.metric(i,value(A_MIN[i],A_MAX[i],q),b(),secondChargeMicroCoulombs);
+        double d=q>pr?v2-v1:v1-v2;
+        double scale=Math.max(Math.abs(v1),Math.abs(v2));
+        if(Math.abs(d)<=1e-9*scale+1e-12)return 2;
+        return d>0?0:1;
+    }
+    private void predict(int choice){
+        if(selected<0)return;
+        predicted[selected]=choice;predActual[selected]=trend(selected);
+        persist();checkAutoComplete();refresh();
+    }
+    private boolean changedFromSaved(int i){
+        if(!hasSaved[i])return false;
+        double before=PhysicsModels.metric(i,savedA[i],savedB[i],savedQ2[i]);
+        double after=PhysicsModels.metric(i,a(),b(),secondChargeMicroCoulombs);
+        return Math.abs(after-before)>1e-9*(Math.abs(before)+Math.abs(after))+1e-12;
+    }
+    private void checkAutoComplete(){
+        if(selected<0||done[selected])return;
+        int i=selected;
+        if(predicted[i]>=0&&hasSaved[i]&&changedFromSaved(i)){
+            done[i]=true;learningCredits++;persist();
+            Toast.makeText(this,"⭐ أنجزت: "+NAMES[i]+" — توقّعت وقارنت وجرّبت",Toast.LENGTH_LONG).show();
+            updateStatus();
+        }
+    }
+    private void updateStatus(){
+        if(statusText==null||selected<0)return;
+        int i=selected;boolean p=predicted[i]>=0,sv=hasSaved[i],m=changedFromSaved(i);
+        statusText.setText("📋 شروط الإنجاز:  "+(p?"☑":"□")+" توقّع    "+(sv?"☑":"□")+" احفظ قياسًا    "+(m?"☑":"□")+" غيّر وقارن"+(done[i]?"\n⭐ المختبر مكتمل":""));
+        statusText.setTextColor(done[i]?GREEN:WHITE);
+    }
+    private int lightDone(int k){return getSharedPreferences("alradhy_light_v05",MODE_PRIVATE).getBoolean("hasMeasure_"+k,false)?1:0;}
+    private View findBySeq(View v,int seq){
+        if(seq<0||v==null)return null;
+        if(v instanceof Button&&v.getTag() instanceof Integer&&((Integer)v.getTag()).intValue()==seq)return v;
+        if(v instanceof ViewGroup){ViewGroup g=(ViewGroup)v;for(int k=0;k<g.getChildCount();k++){View r=findBySeq(g.getChildAt(k),seq);if(r!=null)return r;}}
+        return null;
+    }
+    private void afterRender(boolean keep,final int y,final int y2,final int seq){
+        if(!keep)return;
+        final ScrollView left=scrolling,right=scrollingRight;
+        left.post(()->{
+            left.scrollTo(0,y);if(right!=null)right.scrollTo(0,y2);
+            View v=findBySeq(left,seq);if(v==null&&right!=null)v=findBySeq(right,seq);
+            if(v!=null)v.requestFocus();
+        });
     }
     private void setProgress(boolean first,int progress){
         if(selected<0)return;
@@ -284,16 +354,29 @@ public final class ScienceLabsActivity extends Activity {
         persist();update();
     }
     private void render(){
+        final boolean keep=keepView;keepView=false;
+        final int keepY=scrolling!=null?scrolling.getScrollY():0,keepY2=scrollingRight!=null?scrollingRight.getScrollY():0,keepSeq=focusSeq;
+        btnSeq=0;
         firstSlider=null;secondSlider=null;graphView=null;
-        guideText=null;compareText=null;
+        guideText=null;compareText=null;statusText=null;
         chargeOneSlider=null;
-        drawing=null;result=null;aValue=null;bValue=null;
+        drawing=null;result=null;aValue=null;bValue=null;pane=null;scrollingRight=null;
         ScrollView sc=new ScrollView(this);sc.setFillViewport(true);sc.setBackgroundColor(BG);
         scrolling=sc;
-        page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setPadding(dp(46),dp(20),dp(46),dp(40));
-        sc.addView(page);setContentView(sc);
-        line("ALRADHY DISCOVERY • متحف العلوم التفاعلي V0.5  •  15 مختبرًا",18,GOLD);
-        if(selected<0){renderHub();return;}
+        page=new LinearLayout(this);page.setOrientation(LinearLayout.VERTICAL);page.setClipChildren(false);page.setPadding(dp(46),dp(20),dp(46),dp(40));
+        sc.addView(page);
+        if(selected>=0){
+            pane=new LinearLayout(this);pane.setOrientation(LinearLayout.VERTICAL);pane.setClipChildren(false);
+            pane.setPadding(dp(12),dp(20),dp(46),dp(40));
+            ScrollView sc2=new ScrollView(this);sc2.setFillViewport(true);sc2.setBackgroundColor(BG);sc2.addView(pane);
+            scrollingRight=sc2;
+            LinearLayout both=new LinearLayout(this);both.setOrientation(LinearLayout.HORIZONTAL);both.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+            both.addView(sc,new LinearLayout.LayoutParams(0,-1,1f));
+            both.addView(sc2,new LinearLayout.LayoutParams(0,-1,1.15f));
+            setContentView(both);
+        } else setContentView(sc);
+        line("ALRADHY DISCOVERY • متحف العلوم التفاعلي V0.6  •  15 مختبرًا",18,GOLD);
+        if(selected<0){renderHub();afterRender(keep,keepY,keepY2,keepSeq);return;}
         final int i=selected;
         line("المختبر "+(i+4)+" من 15  •  "+NAMES[i],27,WHITE);
         row(new String[]{"🏛️ المختبرات","◀ السابق","التالي ▶"},new Runnable[]{
@@ -301,9 +384,8 @@ public final class ScienceLabsActivity extends Activity {
             ()->goLab((selected+11)%12),
             ()->goLab((selected+1)%12)
         });
-        row(new String[]{guided?"☑ تعلّم معي":"□ تعلّم معي",guided?"استكشف بحرّيتك":"تعلّم خطوة بخطوة","⟲ إعادة ضبط"},new Runnable[]{
-            ()->{guided=!guided;persist();render();},
-            ()->{guided=!guided;persist();render();},
+        row(new String[]{guided?"☑ تعلّم معي (اضغط للاستكشاف الحر)":"□ تعلّم معي",guided?"⟲ إعادة ضبط":"⟲ إعادة ضبط"},new Runnable[]{
+            ()->{guided=!guided;persist();refresh();},
             ()->resetThisLab()
         });
         if(guided){
@@ -315,9 +397,15 @@ public final class ScienceLabsActivity extends Activity {
             row(new String[]{"الخطوة السابقة","الخطوة التالية","ليش صار كذا؟"},new Runnable[]{
                 ()->stepProgress(false),
                 ()->stepProgress(true),
-                ()->{showExplanation=!showExplanation;render();}
+                ()->{showExplanation=!showExplanation;refresh();}
             });
         }
+        line("🎯 توقّع قبل ما تجرّب: لو رفعت «"+A_LABEL[i]+"» مع ثبات «"+B_LABEL[i]+"»، النتيجة...",18,GOLD);
+        row(new String[]{predicted[i]==0?"✔ تزيد":"تزيد",predicted[i]==1?"✔ تنقص":"تنقص",predicted[i]==2?"✔ تبقى ثابتة":"تبقى ثابتة"},new Runnable[]{
+            ()->predict(0),()->predict(1),()->predict(2)
+        });
+        if(predicted[i]>=0&&predActual[i]>=0)
+            line(predicted[i]==predActual[i]?"✅ توقعك صحيح: النتيجة "+TREND[predActual[i]]:"❌ ما صح — النتيجة الفعلية: "+TREND[predActual[i]]+". غيّر المتغير وشوف السبب.",18,predicted[i]==predActual[i]?GREEN:ORANGE);
         line("🕰️ القصة: "+HISTORY[i],17,MUTED);
         line("🌍 تطبيقات اليوم: "+APPLICATIONS[i],17,CYAN);
         drawing=new LabCanvas();
@@ -331,11 +419,11 @@ public final class ScienceLabsActivity extends Activity {
             if(key==KeyEvent.KEYCODE_DPAD_DOWN){setProgress(false,bProgress[selected]-2);return true;}
             return false;
         });
-        page.addView(drawing,new LinearLayout.LayoutParams(-1,dp(280)));
-        line("🖱️ اسحب داخل الرسم يمين/يسار لتغيير المتغير الأول، أو فوق/تحت للمتغير الثاني. الريموت: الأسهم بعد تحديد الرسم.",15,CYAN);
+        pane.addView(drawing,new LinearLayout.LayoutParams(-1,-2));
+        line(pane,"🖱️ اسحب داخل الرسم يمين/يسار لتغيير المتغير الأول، أو فوق/تحت للمتغير الثاني. الريموت: الأسهم بعد تحديد الرسم.",15,CYAN);
         result=text("",20,WHITE);result.setBackground(shape(CARD,Color.rgb(44,73,104)));
         result.setPadding(dp(18),dp(14),dp(18),dp(14));
-        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(13);p.bottomMargin=dp(14);page.addView(result,p);
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.topMargin=dp(13);p.bottomMargin=dp(14);pane.addView(result,p);
         if(i==2){
             line("⚡ تحكم مباشر في قطبية كل شحنة — بالماوس أو بأسهم الريموت وزر OK",19,CYAN);
             line("قطبية الشحنة الأولى q1",18,WHITE);
@@ -358,29 +446,28 @@ public final class ScienceLabsActivity extends Activity {
             ()->setProgress(false,bProgress[selected]-5),
             ()->setProgress(false,bProgress[selected]+5)
         });
-        row(new String[]{"حالة منخفضة","حالة متوسطة","حالة مرتفعة"},new Runnable[]{
-            ()->{setProgress(true,10);setProgress(false,10);},
-            ()->{setProgress(true,50);setProgress(false,50);},
-            ()->{setProgress(true,90);setProgress(false,90);}
+        row(new String[]{"A منخفض","A متوسط","A مرتفع","B منخفض","B متوسط","B مرتفع"},new Runnable[]{
+            ()->setProgress(true,10),()->setProgress(true,50),()->setProgress(true,90),
+            ()->setProgress(false,10),()->setProgress(false,50),()->setProgress(false,90)
         });
         row(new String[]{"📊 رسم العلاقة","📌 احفظ للمقارنة","❔ التفسير"},new Runnable[]{
-            ()->{showGraph=!showGraph;persist();render();},
+            ()->{showGraph=!showGraph;persist();refresh();},
             ()->saveComparison(),
-            ()->{showExplanation=!showExplanation;render();}
+            ()->{showExplanation=!showExplanation;refresh();}
         });
         compareText=text("",17,WHITE);
         compareText.setBackground(shape(CARD,Color.rgb(50,84,109)));
         compareText.setPadding(dp(16),dp(12),dp(16),dp(12));
-        page.addView(compareText,new LinearLayout.LayoutParams(-1,-2));
+        pane.addView(compareText,new LinearLayout.LayoutParams(-1,-2));
         updateComparison();
         if(showGraph){
-            line("📈 كيف تتغير النتيجة عند تغيير "+A_LABEL[i]+" مع ثبات "+B_LABEL[i]+"؟",18,GOLD);
+            line(pane,"📈 كيف تتغير النتيجة عند تغيير "+A_LABEL[i]+" مع ثبات "+B_LABEL[i]+"؟",18,GOLD);
             graphView=new LabGraphView();
             graphView.setFocusable(false);
-            page.addView(graphView,new LinearLayout.LayoutParams(-1,dp(230)));
-            line("المحور الأفقي: "+A_LABEL[i]+" | المحور الرأسي: "+GRAPH_LABEL[i],15,MUTED);
+            pane.addView(graphView,new LinearLayout.LayoutParams(-1,dp(230)));
+            line(pane,"المحور الأفقي: "+A_LABEL[i]+" | المحور الرأسي: "+GRAPH_LABEL[i],15,MUTED);
         }
-        if(showExplanation) line("💡 ليش صار كذا؟ "+INSIGHT[i],18,GREEN);
+        if(showExplanation) line(pane,"💡 ليش صار كذا؟ "+INSIGHT[i],18,GREEN);
         if(i==2){
             row(new String[]{"q1 −0.5 µC","q1 +0.5 µC","q2 −0.5 µC","q2 +0.5 µC"},new Runnable[]{
                 ()->setFirstCharge(a()-0.5),
@@ -390,34 +477,41 @@ public final class ScienceLabsActivity extends Activity {
             });
             line("تقدر تسحب الشريط، أو تستخدم أزرار الزيادة والنقصان للضبط الدقيق. العلامات الموجبة تتنافر والمختلفة تتجاذب، وعند الصفر تنعدم القوة.",17,MUTED);
         }
-        row(new String[]{done[i]?"✅ تم الإنجاز":"✓ أنجزت التحدي", "إظهار / إخفاء النتيجة"},new Runnable[]{
-            ()->{if(!done[selected])learningCredits++;done[selected]=true;persist();render();},
-            ()->{showExplanation=!showExplanation;render();}
-        });
+        statusText=text("",17,MUTED);statusText.setBackground(shape(CARD,Color.rgb(50,84,109)));
+        statusText.setPadding(dp(16),dp(12),dp(16),dp(12));
+        LinearLayout.LayoutParams stp=new LinearLayout.LayoutParams(-1,-2);stp.bottomMargin=dp(10);page.addView(statusText,stp);
+        updateStatus();
         line("🎯 جرّب بنفسك: "+CHALLENGES[i],18,GOLD);
         line("ما الذي يفترضه النموذج؟ "+LIMITS[i],16,MUTED);
         update();
+        afterRender(keep,keepY,keepY2,keepSeq);
     }
+    private String tile(int k){return (done[k]?"✅ ":"")+(k+4)+". "+NAMES[k].replace(" • ","\n");}
     private void renderHub(){
-        line("3 مختبرات أصلية + 12 مختبرًا جديدًا. استكشف بنفسك أو اختر التعلّم الموجّه، وقارن النتائج واحفظ تقدمك.",23,WHITE);
         int completed=0;for(boolean d:done)if(d)completed++;
-        line("⭐ مكتمل: "+completed+" من 12 مختبرًا جديدًا   •   نقاط الاستكشاف: "+learningCredits,18,GREEN);
+        final int total=completed+lightDone(0)+lightDone(1)+lightDone(2);
+        line("اختر مختبرًا، أو ابدأ بالتعلّم الموجّه: توقّع، جرّب، قارن، ثم افهم السبب. تقدّمك يُحفظ تلقائيًا.",23,WHITE);
+        line("⭐ مكتمل: "+total+" من 15 مختبرًا   •   نقاط الاستكشاف: "+learningCredits,18,GREEN);
+        LinearLayout meter=new LinearLayout(this);meter.setOrientation(LinearLayout.HORIZONTAL);
+        View fill=new View(this);fill.setBackgroundColor(GREEN);
+        View rest=new View(this);rest.setBackgroundColor(Color.rgb(55,89,128));
+        meter.addView(fill,new LinearLayout.LayoutParams(0,dp(8),total));
+        meter.addView(rest,new LinearLayout.LayoutParams(0,dp(8),15-total));
+        LinearLayout.LayoutParams mp=new LinearLayout.LayoutParams(-1,dp(8));mp.bottomMargin=dp(18);page.addView(meter,mp);
         line("المختبرات الأصلية • قياس سرعة الضوء",22,GOLD);
-        row(new String[]{"غاليليو • الفوانيس","رومر • خسوف آيو","فيزو • العجلة"},new Runnable[]{
+        row(new String[]{(lightDone(0)>0?"✅ ":"")+"غاليليو • الفوانيس",(lightDone(1)>0?"✅ ":"")+"رومر • خسوف آيو",(lightDone(2)>0?"✅ ":"")+"فيزو • العجلة"},new Runnable[]{
             ()->openOriginal("galileo"),()->openOriginal("romer"),()->openOriginal("fizeau")
-        });
+        },68);
         line("12 مختبرًا تفاعليًا جديدًا",23,GOLD);
-        for(int k=0;k<12;k+=2){
-            final int left=k,right=k+1;
-            row(new String[]{(k+4)+". "+NAMES[left],(k+5)+". "+NAMES[right]},new Runnable[]{
-                ()->{selected=left;render();},()->{selected=right;render();}
-            });
+        for(int k=0;k<12;k+=3){
+            final int x=k,y=k+1,z=k+2;
+            row(new String[]{tile(x),tile(y),tile(z)},new Runnable[]{()->goLab(x),()->goLab(y),()->goLab(z)},82);
         }
         line("جميع النماذج تعمل دون إنترنت. المخرجات حسابات فيزيائية مبسطة، وليست بيانات من أجهزة قياس حقيقية.",17,MUTED);
         addButton("العودة إلى رحلة المحطات الخمسين",()->finish());
     }
     private void openOriginal(String id){
-        Intent t=new Intent(this,MainActivity.class);t.putExtra("experiment",id);startActivity(t);
+        Intent t=new Intent(this,LightLabsActivity.class);t.putExtra("experiment",id);startActivity(t);
     }
     private TextView control(int i,boolean first){
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);
@@ -430,6 +524,7 @@ public final class ScienceLabsActivity extends Activity {
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(5);page.addView(box,p);
         slider.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener(){
             public void onProgressChanged(SeekBar s,int value,boolean user){
+                if(!user)return;
                 if(first)aProgress[i]=value;else bProgress[i]=value;
                 persist();update();
             }
@@ -454,11 +549,7 @@ public final class ScienceLabsActivity extends Activity {
     private double value(double min,double max,int progress){return min+(max-min)*progress/100.0;}
     private String n(double v,int decimals){return String.format(Locale.US,"%."+decimals+"f",v);}
     private static double rad(double degrees){return Math.toRadians(degrees);}
-    private static double bk7(double lambdaNm){
-        double l=lambdaNm/1000.0,l2=l*l;
-        return Math.sqrt(1+1.03961212*l2/(l2-.00600069867)+.231792344*l2/(l2-.0200179144)+
-            1.01046945*l2/(l2-103.560653));
-    }
+    private static double bk7(double lambdaNm){return PhysicsModels.bk7(lambdaNm);}
     private void update(){
         if(selected<0||result==null)return;
         int i=selected;double x=a(),y=b();
@@ -536,6 +627,7 @@ public final class ScienceLabsActivity extends Activity {
         if(drawing!=null)drawing.invalidate();
         if(graphView!=null)graphView.invalidate();
         updateComparison();
+        checkAutoComplete();updateStatus();
     }
 
     private void updateGuide() {
@@ -548,6 +640,7 @@ public final class ScienceLabsActivity extends Activity {
     }
     private void updateComparison() {
         if(compareText==null||selected<0)return;
+        compareText.setTextColor(WHITE);
         if(!hasSaved[selected]){
             compareText.setText("📌 المقارنة: احفظ قياسًا أولًا، وبعدها غيّر متغيرًا واحدًا وقارن النتيجتين.");
             return;
@@ -562,28 +655,9 @@ public final class ScienceLabsActivity extends Activity {
             "قبل: "+n(before,4)+"  |  الآن: "+n(after,4)+"  |  الفرق: "+(diff>0?"+":"")+n(diff,4)+"\n"+
             "الوحدة: "+GRAPH_LABEL[i]+"  •  غيّر أداة واحدة لتعرف السبب."
         );
+        compareText.setTextColor(diff>1e-12?GREEN:diff<-1e-12?ORANGE:WHITE);
     }
-    private double metric(int i,double x,double y,double q2){
-        switch(i){
-            case 0: {
-                double A=rad(x),red=2*Math.asin(bk7(650)*Math.sin(A/2))-A,
-                  blue=2*Math.asin(bk7(450)*Math.sin(A/2))-A;
-                return y*(Math.tan(blue)-Math.tan(red))*100;
-            }
-            case 1: return 15.041067*Math.sin(rad(x));
-            case 2: return 8.9875517923e9*(x*1e-6)*(q2*1e-6)/(y*y);
-            case 3: return Math.sqrt(3.986004418e14/((6371+x)*1000.0))/1000.0;
-            case 4: return x*1e-9*2.0/(y*1e-3)*1000.0;
-            case 5: return x*G*.001;
-            case 6: return 50*.01*2*Math.PI*y*x;
-            case 7: return x/y;
-            case 8: return Math.sqrt(x*x*x);
-            case 9: return x*343/(343-y);
-            case 10: return 2*Math.PI*Math.sqrt(x/y);
-            case 11: return Math.max(0,1239.841984/x-y);
-            default: return 0;
-        }
-    }
+    private double metric(int i,double x,double y,double q2){return PhysicsModels.metric(i,x,y,q2);}
     private final class LabGraphView extends View{
         private final Paint p=new Paint(Paint.ANTI_ALIAS_FLAG);
         LabGraphView(){super(ScienceLabsActivity.this);setBackground(shape(CARD,Color.rgb(48,75,104)));}
@@ -608,7 +682,7 @@ public final class ScienceLabsActivity extends Activity {
                 float y=top+(bottom-top)*i/4f;
                 canvas.drawLine(left,y,right,y,p);
             }
-            p.setStyle(Paint.Style.FILL);p.setColor(MUTED);p.setTextSize(dp(12));
+            p.setStyle(Paint.Style.FILL);p.setColor(MUTED);p.setTextSize(dp(14));
             canvas.drawText(n(high,2),dp(4),top+dp(6),p);
             canvas.drawText(n(low,2),dp(4),bottom,p);
             canvas.drawText(n(A_MIN[selected],1),left,bottom+dp(24),p);
@@ -624,8 +698,18 @@ public final class ScienceLabsActivity extends Activity {
             double v=metric(selected,a(),bx,secondChargeMicroCoulombs);
             float sx=left+(right-left)*aProgress[selected]/100f;
             float sy=(float)(bottom-(v-low)/(high-low)*(bottom-top));
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(dp(1));p.setColor(Color.argb(110,246,197,99));canvas.drawLine(sx,top,sx,bottom,p);
+            if(hasSaved[selected]){
+                double sv=metric(selected,savedA[selected],savedB[selected],savedQ2[selected]);
+                double span=A_MAX[selected]-A_MIN[selected];
+                float px=left+(right-left)*(float)Math.max(0,Math.min(1,(savedA[selected]-A_MIN[selected])/span));
+                float py=(float)Math.max(top,Math.min(bottom,bottom-(sv-low)/(high-low)*(bottom-top)));
+                p.setStyle(Paint.Style.STROKE);p.setColor(WHITE);p.setStrokeWidth(dp(2));canvas.drawCircle(px,py,dp(8),p);
+                p.setStyle(Paint.Style.FILL);p.setTextSize(dp(14));
+                canvas.drawText("قبل",Math.max(left,Math.min(right-dp(40),px-dp(14))),Math.min(bottom-dp(6),py+dp(24)),p);
+            }
             p.setStyle(Paint.Style.FILL);p.setColor(GOLD);canvas.drawCircle(sx,sy,dp(7),p);
-            p.setColor(WHITE);p.setTextSize(dp(13));
+            p.setColor(WHITE);p.setTextSize(dp(15));
             canvas.drawText("● "+n(v,3),Math.max(left,Math.min(right-dp(85),sx-dp(25))),Math.max(top+dp(15),sy-dp(12)),p);
         }
     }
@@ -635,7 +719,8 @@ public final class ScienceLabsActivity extends Activity {
         private int downA,downB;
         private double downQ2;
         private boolean dragSecondCharge;
-        LabCanvas(){super(ScienceLabsActivity.this);setLayerType(View.LAYER_TYPE_SOFTWARE,null);}
+        LabCanvas(){super(ScienceLabsActivity.this);}
+        @Override protected void onMeasure(int w,int h){int width=MeasureSpec.getSize(w);setMeasuredDimension(width,Math.round(width*0.44f));}
         @Override public boolean onTouchEvent(MotionEvent ev){
             if(selected<0)return false;
             switch(ev.getActionMasked()){
@@ -831,7 +916,7 @@ public final class ScienceLabsActivity extends Activity {
             }
             actual.restore();
             // Only animate experiments whose picture changes with time.
-            if(i==1||i==9||i==10)postInvalidateDelayed(80);
+            if(i==1||i==9||i==10)postInvalidateDelayed(40);
         }
     }
 }
