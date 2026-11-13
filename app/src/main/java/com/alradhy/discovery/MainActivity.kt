@@ -549,7 +549,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         headerRow.addView(indexBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
         val discoveryLabButton = TextView(this).apply {
-            text = "🏛️ متحف العلوم V0.5 (15 مختبرًا)"
+            text = "🏛️ متحف العلوم V0.6 (15 مختبرًا)"
             setTextColor(Color.WHITE)
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
             typeface = Typeface.DEFAULT_BOLD
