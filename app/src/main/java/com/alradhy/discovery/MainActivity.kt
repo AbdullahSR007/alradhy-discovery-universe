@@ -56,6 +56,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     private lateinit var tabTimeBtn: TextView
     private lateinit var tabCosmosBtn: TextView
     private lateinit var experimentButton: TextView
+    private lateinit var brandHeader: TextView
 
     // ==================== 25 HISTORY & SCIENCE STATIONS ====================
     private val historyStations = listOf(
@@ -527,6 +528,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
 
         val brandTitle = TextView(this).apply {
+            brandHeader = this
             text = "🌌 ALRADHY DISCOVERY  [ 50 محطة ]"
             setTextColor(Color.parseColor("#00E5FF"))
             setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
@@ -625,7 +627,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         titleText = TextView(this).apply {
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 22f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 26f)
             typeface = Typeface.DEFAULT_BOLD
             setPadding(0, dp(2), 0, dp(2))
         }
@@ -641,9 +643,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         experimentButton = TextView(this).apply {
             text = "🔬 ادخل 15 مختبرًا علميًا"
             setTextColor(Color.WHITE)
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 19f)
             typeface = Typeface.DEFAULT_BOLD
-            setPadding(dp(14), dp(9), dp(14), dp(9))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
             gravity = Gravity.CENTER
             styleInteractiveButton(this, "#16402F", "#46C8A0")
             setOnClickListener {
@@ -659,9 +661,6 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
                 }
             }
         }
-        infoCard.addView(experimentButton, LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
-        ).apply { bottomMargin = dp(8) })
 
         val infoScroll = ScrollView(this).apply {
             isVerticalScrollBarEnabled = true
@@ -672,8 +671,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         summaryText = TextView(this).apply {
             setTextColor(Color.parseColor("#E2E8F0"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
-            setLineSpacing(dp(4).toFloat(), 1.0f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f)
+            setLineSpacing(dp(5).toFloat(), 1.0f)
             setPadding(0, 0, 0, dp(10))
         }
         scrollInner.addView(summaryText)
@@ -694,6 +693,16 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         infoScroll.addView(scrollInner)
         infoCard.addView(infoScroll, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+        val labCaption = TextView(this).apply {
+            text = "🧪 تجربة مرتبطة بهذه المحطة — غيّر المتغيرات بنفسك وشاهد النتيجة"
+            setTextColor(Color.parseColor("#7DD3B0"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
+            setPadding(0, dp(10), 0, dp(6))
+        }
+        infoCard.addView(labCaption)
+        infoCard.addView(experimentButton, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
+        ))
 
         centerArea.addView(
             infoCard,
@@ -825,8 +834,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         speedLabel = TextView(this).apply {
             text = "السرعة: 1.0x | الطاقة: 1.0x"
-            setTextColor(Color.parseColor("#94A3B8"))
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+            setTextColor(Color.parseColor("#CBD5E1"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
         }
         bottomBar.addView(speedLabel, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
@@ -870,6 +879,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val globalNumber = if (cat == 0) (idx + 1) else (idx + 26)
             val btn = TextView(this).apply {
                 text = "[$globalNumber] ${item.badge} ${item.title}"
+                tag = text.toString()
                 setTextColor(Color.WHITE)
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
                 setPadding(dp(14), dp(8), dp(14), dp(8))
@@ -893,7 +903,7 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         val list = getCurrentList()
         if (index !in list.indices) return
         currentIndex = index
-        progress.edit().putInt("category", currentCategory).putInt("station", index).apply()
+        progress.edit().putInt("category", currentCategory).putInt("station", index).putBoolean("seen_${currentCategory}_$index", true).apply()
         val item = list[index]
         val globalNumber = if (currentCategory == 0) (index + 1) else (index + 26)
 
@@ -913,9 +923,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             val tv = TextView(this).apply {
                 text = fact
                 setTextColor(Color.parseColor("#CCFBF1"))
-                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                setTextSize(TypedValue.COMPLEX_UNIT_SP, 17f)
                 background = makeRoundedBox("#111E3B", "#1E3A8A", 1, 8)
-                setPadding(dp(12), dp(8), dp(12), dp(8))
+                setPadding(dp(14), dp(10), dp(14), dp(10))
             }
             val lp = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = dp(6)
@@ -925,6 +935,8 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         for (i in 0 until stationRow.childCount) {
             val child = stationRow.getChildAt(i) as? TextView ?: continue
+            val baseText = child.tag as? String ?: child.text.toString().removePrefix("✓ ")
+            child.text = if (progress.getBoolean("seen_${currentCategory}_$i", false)) "✓ $baseText" else baseText
             if (i == index) {
                 child.setTextColor(Color.parseColor("#FFD54F"))
                 child.typeface = Typeface.DEFAULT_BOLD
@@ -937,6 +949,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
             }
         }
 
+        var explored = 0
+        for (c in 0..1) for (s in 0..24) if (progress.getBoolean("seen_${c}_$s", false)) explored++
+        brandHeader.text = "🌌 ALRADHY DISCOVERY  [ استكشفت $explored من 50 محطة ]"
         universeCanvas.category = currentCategory
         universeCanvas.stationIndex = index
         universeCanvas.visualType = item.visualType
