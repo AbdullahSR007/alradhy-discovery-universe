@@ -771,6 +771,17 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
         }
         bottomBar.addView(nextBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
 
+        val discoverBtn = TextView(this).apply {
+            text = "🎲 اكتشف محطة جديدة"
+            setTextColor(Color.parseColor("#0B1020"))
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            typeface = Typeface.DEFAULT_BOLD
+            setPadding(dp(12), dp(8), dp(12), dp(8))
+            styleInteractiveButton(this, "#FFD54F", "#FFF1A8")
+            setOnClickListener { discoverNewStation() }
+        }
+        bottomBar.addView(discoverBtn, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = dp(8) })
+
         val ttsBtn = TextView(this).apply {
             text = "🔊 الراوي الصوتي"
             setTextColor(Color.WHITE)
@@ -856,6 +867,25 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
     )
     private fun suggestedMuseumLabIndex(): Int =
         getCurrentList().getOrNull(currentIndex)?.lab ?: -1
+    private fun isSeen(cat: Int, i: Int) = progress.getBoolean("seen_${cat}_$i", false)
+
+    // Jumps to the next station the visitor has not opened yet (this category first, then the other one).
+    private fun discoverNewStation() {
+        for (step in 1..25) {
+            val i = (currentIndex + step) % 25
+            if (!isSeen(currentCategory, i)) { selectStation(i); return }
+        }
+        val other = 1 - currentCategory
+        for (i in 0 until 25) {
+            if (!isSeen(other, i)) {
+                selectCategory(other)
+                selectStation(i)
+                return
+            }
+        }
+        android.widget.Toast.makeText(this, "🎉 أنهيت جولة المتحف كاملة: 50 من 50", android.widget.Toast.LENGTH_LONG).show()
+    }
+
     private fun getCurrentList(): List<DiscoveryItem> {
         return if (currentCategory == 0) historyStations else cosmicStations
     }
@@ -951,7 +981,9 @@ class MainActivity : Activity(), TextToSpeech.OnInitListener {
 
         var explored = 0
         for (c in 0..1) for (s in 0..24) if (progress.getBoolean("seen_${c}_$s", false)) explored++
-        brandHeader.text = "🌌 ALRADHY DISCOVERY  [ استكشفت $explored من 50 محطة ]"
+        val filled = explored * 10 / 50
+        val bar = "▰".repeat(filled) + "▱".repeat(10 - filled)
+        brandHeader.text = "🌌 ALRADHY DISCOVERY   $bar  $explored / 50"
         universeCanvas.category = currentCategory
         universeCanvas.stationIndex = index
         universeCanvas.visualType = item.visualType
