@@ -92,6 +92,10 @@ internal class TvStyle(private val context: Context, private val store: Progress
         view.isFocusable = true
         view.isFocusableInTouchMode = true
         view.setOnClickListener { onClick() }
+        view.setOnTouchListener { target, event ->
+            if (event.actionMasked == MotionEvent.ACTION_DOWN && !target.isFocused) target.requestFocus()
+            false
+        }
         view.setOnHoverListener { v, event ->
             if (event.actionMasked == MotionEvent.ACTION_HOVER_ENTER && v.hasWindowFocus()) v.requestFocus()
             false
