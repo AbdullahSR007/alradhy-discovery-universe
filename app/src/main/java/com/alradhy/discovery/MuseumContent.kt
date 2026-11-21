@@ -6,9 +6,14 @@ import android.graphics.Color
 import org.json.JSONArray
 import org.json.JSONObject
 
-internal data class Control(val label: String, val min: Double, val max: Double, val initial: Double, val step: Double) {
+internal data class Control(val label: String, val min: Double, val max: Double, val initial: Double, val step: Double,
+    val symbol: String = "", val unit: String = "", val discrete: Boolean = false) {
     fun fromLegacy(position: Int) = min + (max - min) * position.coerceIn(0, 100) / 100
-    fun clamp(value: Double) = if (value.isFinite()) value.coerceIn(min, max) else initial
+    fun clamp(value: Double): Double {
+        if (!value.isFinite()) return initial
+        val bounded = value.coerceIn(min, max)
+        return if (discrete) (min + Math.round((bounded - min) / step) * step).coerceIn(min, max) else bounded
+    }
 }
 
 internal data class Quiz(val question: String, val options: List<String>, val correct: Int, val explanation: String)
@@ -18,7 +23,8 @@ internal data class Topic(
     val id: String, val wing: String, val title: String, val english: String, val summary: String,
     val idea: String, val equation: String, val quiz: Quiz, val visual: Int, val scale: Double?,
     val legacy: Int?, val station: OldStation?, val controls: List<Control>, val metric: String,
-    val assumptions: String, val challenge: String, val note: String, val application: String, val facts: List<String>
+    val assumptions: String, val challenge: String, val note: String, val application: String, val facts: List<String>,
+    val unit: String, val symbol: String, val axis: Int
 ) {
     val isLab get() = controls.isNotEmpty()
     fun defaults() = controls.map { it.initial }.toDoubleArray()
@@ -46,7 +52,8 @@ internal class MuseumContent(context: Context) {
         val legacy = data.optInt("legacyIndex", -1).takeIf { it >= 0 }
         val rawControls = data.optJSONArray("controls")
         val controls = rawControls?.mapObjects {
-            Control(it.getString("label"), it.getDouble("min"), it.getDouble("max"), it.getDouble("init"), it.getDouble("step"))
+            Control(it.getString("label"), it.getDouble("min"), it.getDouble("max"), it.getDouble("init"),
+                it.getDouble("step"), it.optString("symbol"), it.optString("unit"), it.optBoolean("discrete"))
         }.orEmpty()
         val facts = data.optJSONArray("facts")
         val q = data.getJSONObject("quiz")
@@ -61,7 +68,8 @@ internal class MuseumContent(context: Context) {
             data.optInt("visualType", 9), data.optDouble("scaleMeters").takeIf { it.isFinite() }, legacy, station, controls,
             data.optString("metric"), data.optString("assumptions"), data.optString("challenge"),
             data.optString("discoveryNote"), data.optString("application"),
-            facts?.let { List(it.length()) { index -> it.getString(index) } }.orEmpty()
+            facts?.let { List(it.length()) { index -> it.getString(index) } }.orEmpty(),
+            data.optString("unit"), data.optString("symbol"), data.optInt("axis")
         )
     }
 

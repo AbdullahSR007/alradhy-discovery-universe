@@ -76,7 +76,7 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
             drawPane(canvas, saved, paneWidth, paneWidth, "BASELINE")
             line(canvas, paneWidth, 0f, paneWidth, height.toFloat(), 0xff64748b.toInt(), 2f)
         }
-        if (running) {
+        if (running && !topic.isExpansion) {
             when (topic.id) {
                 "telecom.link-budget" -> if (presentation) postInvalidateOnAnimation() else Unit
                 "telecom.fresnel", "fields.rc", "fields.wire" -> Unit
@@ -92,6 +92,8 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         c.scale(width / 1000f, height / 440f)
         if (topic.id == "mechanics.newton2") {
             newton(c, p)
+        } else if (topic.isExpansion) {
+            modelPanel(c, p)
         } else if (topic.legacy != null) {
             val a = topic.controls[0]
             val b = topic.controls[1]
@@ -121,6 +123,97 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
             text(c, tag, 34f, 36f, 20f, 0xffe8eef9.toInt())
         }
         c.restore()
+    }
+
+    /** Measurements share the same model and units as the sweep and control panel. */
+    private fun modelPanel(c: Canvas, p: DoubleArray) {
+        val soft = 0xffa6b7d2.toInt()
+        val frame = 0xff253857.toInt()
+        val first = graphAxis(topic)
+        val components = components(p)
+        val grid = topic.id == "telecom.nr-grid"
+        val indexes = (listOf(first) + p.indices.filter { it != first }).take(if (components != null || grid) 3 else 6)
+        text(c, when (topic.wing) {
+            "telecom" -> "SIGNAL & NETWORK"
+            "scale" -> "SCALE MEASUREMENT"
+            "matter" -> "MATERIAL MEASUREMENT"
+            "light" -> "OPTICAL BENCH"
+            "astro" -> "ASTRONOMICAL MEASUREMENT"
+            "fields" -> "CIRCUIT MEASUREMENT"
+            else -> "MECHANICS MEASUREMENT"
+        }, 45f, 86f, 23f, soft)
+        indexes.forEachIndexed { index, i ->
+            val spec = topic.controls[i]
+            val row = index / 3
+            val column = index % 3
+            val left = 42f + column * 305
+            val y = 109f + row * 79
+            ink.style = Paint.Style.FILL
+            ink.color = 0xff13213a.toInt()
+            c.drawRoundRect(left, y, left + 282, y + 66, 12f, 12f, ink)
+            val input = formatControl(topic, i, p[i])
+            text(c, spec.symbol + "  " + input + if (spec.unit.isEmpty()) "" else " " + spec.unit,
+                left + 12, y + 43f, 23f, if (i == first) accent else soft)
+        }
+        if (grid) drawResourceGrid(c, p[5], soft)
+        if (components != null) drawComponents(c, components, soft)
+        val meter = if (indexes.size > 3 || grid || components != null) 280f else 245f
+        line(c, 44f, meter, 951f, meter, frame, 2f)
+        dot(c, 57f, meter, 5f, accent)
+        text(c, "MEASURED  " + topic.symbol, 47f, meter + 42f, 21f, soft)
+        text(c, fmt(reading(topic, p), if (topic.id == "scale.power-ratio") 3 else 2) + headlineUnit(topic),
+            47f, meter + 103f, 49f, accent)
+    }
+
+    private data class Component(val name: String, val width: Double, val value: String)
+
+    private fun components(p: DoubleArray): List<Component>? = when (topic.id) {
+        "telecom.packet-delay" -> {
+            val serialization = p[0] * .008 / p[1]
+            val propagation = p[2] / 200
+            listOf(Component("SERIALIZE", serialization, fmt(serialization, 3) + " ms"),
+                Component("PROPAGATE", propagation, fmt(propagation, 3) + " ms"),
+                Component("QUEUE", p[3], fmt(p[3], 3) + " ms"))
+        }
+        "telecom.optical-budget" -> listOf(
+            Component("FIBER", p[0] * p[1], fmt(p[0] * p[1]) + " dB"),
+            Component("SPLICES", p[3], fmt(p[3]) + " dB"),
+            Component("CONNECTORS", p[4], fmt(p[4]) + " dB"))
+        "telecom.sinr", "telecom.power-sum" -> {
+            val tallest = p.max()
+            p.mapIndexed { i, value ->
+                val tag = if (topic.id == "telecom.sinr") listOf("SIGNAL", "INTERFERENCE", "NOISE")[i]
+                    else if (i == 0) "POWER 1" else "POWER 2"
+                Component(tag, 10.0.pow((value - tallest) / 10), fmt(value) + " dBm")
+            }
+        }
+        else -> null
+    }
+
+    private fun drawComponents(c: Canvas, components: List<Component>, soft: Int) {
+        val scale = components.maxOf { it.width }.coerceAtLeast(1e-12)
+        components.forEachIndexed { i, part ->
+            val x = 48 + 305f * i
+            val colors = intArrayOf(accent, 0xfffbbf24.toInt(), 0xffc084fc.toInt())
+            val color = colors[i]
+            text(c, part.name, x, 195f, 17f, soft)
+            line(c, x, 215f, x + 246, 215f, 0xff253857.toInt(), 6f)
+            if (part.width > 0) line(c, x, 215f, x + (part.width / scale * 246).toFloat(), 215f, color, 6f)
+            text(c, part.value, x, 248f, 20f, color)
+        }
+    }
+
+    private fun drawResourceGrid(c: Canvas, overhead: Double, soft: Int) {
+        val active = (100 - overhead).roundToInt()
+        for (cell in 0 until 100) {
+            val x = 49f + cell % 25 * 23
+            val y = 184f + cell / 25 * 19
+            ink.style = Paint.Style.FILL
+            ink.color = if (cell < active) accent else 0xff31405f.toInt()
+            c.drawRoundRect(x, y, x + 18, y + 14, 3f, 3f, ink)
+        }
+        text(c, "$active% PAYLOAD", 657f, 210f, 21f, accent)
+        text(c, fmt(overhead, 0) + "% OVERHEAD", 657f, 242f, 21f, soft)
     }
 
     private fun newton(c: Canvas, p: DoubleArray) {
@@ -400,82 +493,4 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         ink.textSize = size
         c.drawText(text, x, y, ink)
     }
-}
-
-internal class CurveView(context: Context, private val topic: Topic, private val accent: Int) : View(context) {
-    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val path = Path()
-    private val dashes = android.graphics.DashPathEffect(floatArrayOf(9f, 7f), 0f)
-    private val axis = graphAxis(topic)
-    private var sampled = DoubleArray(65)
-    private var old: DoubleArray? = null
-    private var dotX = .5
-    private var dotY = 0.0
-    private var low = 0.0
-    private var high = 1.0
-
-    fun update(values: DoubleArray, baseline: DoubleArray?) {
-        val control = topic.controls[axis]
-        fun sample(values: DoubleArray): DoubleArray {
-            val probe = values.copyOf()
-            return DoubleArray(65) {
-                probe[axis] = control.min + (control.max - control.min) * it / 64
-                reading(topic, probe)
-            }
-        }
-        sampled = sample(values)
-        old = baseline?.let(::sample)
-        dotX = (values[axis] - control.min) / (control.max - control.min)
-        dotY = reading(topic, values)
-        val finite = (sampled.toList() + old.orEmptyList() + dotY).filter { it.isFinite() }
-        low = finite.minOrNull() ?: 0.0
-        high = finite.maxOrNull() ?: 1.0
-        if (abs(high - low) < 1e-9) {
-            val margin = max(abs(high) * .05, .0001)
-            low -= margin
-            high += margin
-        }
-        invalidate()
-    }
-
-    override fun onDraw(c: Canvas) {
-        val left = 8f
-        val right = width - 8f
-        val top = 8f
-        val bottom = height - 8f
-        if (right <= left || bottom <= top) return
-        fun y(value: Double) = bottom - ((value - low) / (high - low)).toFloat() * (bottom - top)
-        paint.strokeWidth = 1f
-        paint.color = 0xff2e4160.toInt()
-        for (i in 0..4) {
-            val row = top + (bottom - top) * i / 4
-            c.drawLine(left, row, right, row, paint)
-        }
-        fun curve(values: DoubleArray, dashed: Boolean) {
-            path.reset()
-            var connected = false
-            values.forEachIndexed { i, value ->
-                if (value.isFinite()) {
-                    val x = left + (right - left) * i / (values.size - 1)
-                    if (connected) path.lineTo(x, y(value)) else path.moveTo(x, y(value))
-                    connected = true
-                } else connected = false
-            }
-            paint.color = if (dashed) 0xffb4c4d9.toInt() else accent
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 3f
-            paint.pathEffect = if (dashed) dashes else null
-            c.drawPath(path, paint)
-            paint.pathEffect = null
-        }
-        old?.let { curve(it, true) }
-        curve(sampled, false)
-        if (dotY.isFinite()) {
-            paint.color = 0xfffbbf24.toInt()
-            paint.style = Paint.Style.FILL
-            c.drawCircle(left + (right - left) * dotX.toFloat(), y(dotY), 6f, paint)
-        }
-    }
-
-    private fun DoubleArray?.orEmptyList() = this?.toList().orEmpty()
 }

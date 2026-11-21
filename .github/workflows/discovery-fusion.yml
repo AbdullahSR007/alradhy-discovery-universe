@@ -17,10 +17,10 @@ jobs:
     if: github.ref == 'refs/heads/feature/science-museum-v1'
     runs-on: ubuntu-24.04
     env:
-      APK: ALRADHY-Discovery-Science-Android-TV-v1.0.2.apk
+      APK: ALRADHY-Discovery-Science-Android-TV-v1.1.0.apk
       BASELINE_CERT: 07ebe30363308176995207c325f66a3986e30f73b88e7400b65f40be95163c4c
       BASELINE_PACKAGE: com.alradhy.discovery15labs.museumv05
-      BASELINE_VERSION: '14'
+      BASELINE_VERSION: '17'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -46,12 +46,13 @@ jobs:
       - name: Validate exhibit content and models
         run: |
           set -euo pipefail
-          python3 scripts/check_content.py
           python3 scripts/check_science_models.py
           mkdir -p "$RUNNER_TEMP/physics"
           javac -encoding UTF-8 -d "$RUNNER_TEMP/physics" \
-            app/src/main/java/com/alradhy/discoverylab/{PhysicsModels,LabCatalog,ScienceExtensions}.java scripts/PhysicsCheck.java
+            app/src/main/java/com/alradhy/discoverylab/{PhysicsModels,LabCatalog,ScienceExtensions,ExpansionModels,GraphSweep,MuseumMeasurements}.java scripts/PhysicsCheck.java scripts/ExperimentGraphCheck.java
           java -cp "$RUNNER_TEMP/physics" PhysicsCheck
+          python3 scripts/check_content.py --graph-manifest "$RUNNER_TEMP/labs.tsv"
+          java -cp "$RUNNER_TEMP/physics" ExperimentGraphCheck "$RUNNER_TEMP/labs.tsv"
       - name: Build with the installed application's signing key
         env:
           KEYSTORE_B64: ${{ secrets.ALRADHY_KEYSTORE_B64 }}
@@ -80,7 +81,7 @@ jobs:
           certificate=$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' <<< "$certs")
           [[ "$package" == "$BASELINE_PACKAGE" ]]
           [[ "$code" =~ ^[0-9]+$ && "$code" -gt "$BASELINE_VERSION" ]]
-          [[ "$version" == '1.0.2-science' ]]
+          [[ "$version" == '1.1.0-science' ]]
           [[ "$certificate" == "$BASELINE_CERT" ]]
           ! grep -q '^application-debuggable' <<< "$badging"
           sha256sum "$APK" | tee museum-sha256.txt
@@ -88,7 +89,7 @@ jobs:
       - name: Upload verified Android TV APK
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Science-Android-TV-v1.0.2
+          name: ALRADHY-Discovery-Science-Android-TV-v1.1.0
           path: |
             ${{ env.APK }}
             museum-sha256.txt
@@ -97,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "science-museum-v1.0.2-b$GITHUB_RUN_NUMBER" "$APK" museum-sha256.txt \
+          gh release create "science-museum-v1.1.0-b$GITHUB_RUN_NUMBER" "$APK" museum-sha256.txt \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Science 1.0.2 for Android TV" \
-            --notes "Seven science wings, 56 interactive experiments, and a telecom workbench for link budget, Fresnel clearance, QAM and satellite latency. Signed APK verified against the Android TV versionCode 14 baseline. Physical-device QA pending." \
+            --title "ALRADHY Discovery Science 1.1.0 for Android TV" \
+            --notes "88 interactive experiments across seven wings, including 30 telecom labs. Graphs share live models, show units and exact readings, and offer a selectable X axis. Signed APK verified against the installed Android TV versionCode 17 baseline." \
             --prerelease

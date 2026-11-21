@@ -302,7 +302,7 @@ class MainActivity : Activity() {
                 val stars = content.topics.count(store::starred)
                 val buttons = listOf(
                     topTool("top.search", "بحث", "scale", teal) { open("search") },
-                    action("top.progress", "★  $stars", 0xfffacc15.toInt(), 16) { open("progress") },
+                    action("top.progress", "★  $stars", gold, 16) { open("progress") }.apply { setTextColor(gold) },
                     topTool("top.settings", "الإعدادات", "settings", muted) { open("settings") }
                 )
                 buttons.forEach { button -> tools.addView(button, LinearLayout.LayoutParams(ui.dp(55), -1).apply { marginStart = ui.dp(6) }) }
@@ -441,7 +441,7 @@ class MainActivity : Activity() {
             experiments.isEmpty() -> "${wing.topics.size} موضوعًا"
             else -> "${experiments.size} مختبرًا" + if (complete > 0) "  •  $complete مكتمل" else ""
         }
-        val progress = if (experiments.isEmpty()) seen.toFloat() / wing.topics.size else complete.toFloat() / experiments.size
+        val progress = if (wing.id == "scale" || experiments.isEmpty()) seen.toFloat() / wing.topics.size else complete.toFloat() / experiments.size
         return showcaseCard("wing.${wing.id}", wing.id, wing.title, caption, wing.color, progress) { openWing(wing) }
     }
 
@@ -478,9 +478,9 @@ class MainActivity : Activity() {
                 render()
             }
         })
-        ui.add(menu, filter)
+        if (wing.id != "scale") ui.add(menu, filter)
         val list = ui.column()
-        val filtered = when (page.filter) {
+        val filtered = if (wing.id == "scale") wing.topics.filter(Topic::isLab) else when (page.filter) {
             1 -> wing.topics.filter(Topic::isLab)
             2 -> wing.topics.filterNot { store.done(it) || store.starred(it) }
             else -> wing.topics
@@ -502,21 +502,35 @@ class MainActivity : Activity() {
             preview.addView(inner, FrameLayout.LayoutParams(-1, -1))
         }
         if (filtered.isEmpty()) ui.add(list, ui.text("ما فيه مواضيع بهذا الفلتر", 19, muted), 12)
-        filtered.forEach { item ->
-            val prefix = if (store.done(item) || store.starred(item)) "✓  " else ""
-            val button = action("item.${item.id}", prefix + item.title, wing.color, 18) { open("topic", item.id) }
-            val focus = button.onFocusChangeListener
-            button.onFocusChangeListener = View.OnFocusChangeListener { view, selected ->
-                focus?.onFocusChange(view, selected)
-                if (selected) show(item)
+        val groups = if (wing.id == "telecom") filtered.groupBy { telecomSection(it.id) }
+            else linkedMapOf("" to filtered)
+        groups.forEach { (heading, items) ->
+            if (heading.isNotBlank()) ui.add(list, ui.text(heading, 15, wing.color, true), 10)
+            items.forEach { item ->
+                val prefix = if (store.done(item) || store.starred(item)) "✓  " else ""
+                val button = action("item.${item.id}", prefix + item.title, wing.color, 18) { open("topic", item.id) }
+                val focus = button.onFocusChangeListener
+                button.onFocusChangeListener = View.OnFocusChangeListener { view, selected ->
+                    focus?.onFocusChange(view, selected)
+                    if (selected) show(item)
+                }
+                ui.add(list, button, 7)
             }
-            ui.add(list, button, 7)
         }
         filtered.firstOrNull()?.let { show(it); preferred = "item.${it.id}" }
         menu.addView(ui.scroll(list), LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(6) })
         body.addView(menu, LinearLayout.LayoutParams(0, -1, 1f))
         body.addView(preview, LinearLayout.LayoutParams(0, -1, 1.13f).apply { marginStart = ui.dp(12) })
         return body
+    }
+
+    private fun telecomSection(id: String): String = when (id.substringAfter('.')) {
+        "nr-grid", "rsrq", "sinr", "sensitivity", "cell-radius" -> "شبكات النفاذ  ·  RAN"
+        "fresnel", "rain", "link-budget", "friis", "fspl", "wavelength", "horizon", "dish", "tilt",
+        "eirp", "vswr", "power-sum" -> "الانتشار والهوائيات  ·  RF"
+        "fiber", "optical-budget", "dispersion" -> "الألياف الضوئية"
+        "packet-delay", "availability", "satellite", "orbit-latency" -> "النقل وزمن الشبكة"
+        else -> "الإشارة والتضمين"
     }
 
     private fun visual(item: Topic, color: Int): View = if (item.isLab) ExperimentView(this, item, color).apply {
@@ -583,7 +597,10 @@ class MainActivity : Activity() {
             ui.add(ruler, buttons, 9)
             current.nextFocusRightId = buttons.getChildAt(0).id
             current.nextFocusLeftId = buttons.getChildAt(1).id
-            ui.add(ruler, current, 6)
+            val actions = ui.row()
+            val experiments = action("scale.labs", "مختبرات المقاييس", teal, 16) { open("wing", "scale") }
+            ui.cells(actions, listOf(current, experiments))
+            ui.add(ruler, actions, 6)
             preferred = "scale.current"
             store.visit(content.scale[scaleIndex])
         } else {
@@ -624,7 +641,7 @@ class MainActivity : Activity() {
     }
 
     private fun lab(item: Topic): View {
-        val lab = LabWorkbench(this, ui, store, item, content.wing(item.wing).color,
+        val lab = LabWorkbench(this, ui, store, item, if (item.wing == "mechanics") gold else content.wing(item.wing).color,
             { key, view -> bind(key, view) }, { quiz(item) }, { speak(it) })
         workbench = lab
         preferred = lab.initial
@@ -794,7 +811,7 @@ class MainActivity : Activity() {
         setting("tts.speed", "سرعة القراءة", listOf("بطيئة", "عادية", "سريعة")[speed]) { store.set("tts.speed", (speed + 1) % 3) }
         toggle("sound", "صوت الإجابة")
         ui.add(box, action("settings.preview", "ابدأ عرض المقاييس الآن", teal, 19) { open("ambient") }, 6)
-        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.0.2\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
+        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.1.0\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
         preferred = "settings.text"
         return ui.scroll(box)
     }

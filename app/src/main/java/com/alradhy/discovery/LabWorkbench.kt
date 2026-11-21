@@ -27,6 +27,9 @@ internal class LabWorkbench(
     private var speed = 1.0
     private var showGraph = store.flag("graph", true)
     private var activeControl = 0
+    private var chartAxis = graphAxis(topic)
+    private val chartTitle = ui.text("", 13, muted)
+    private val legend = ui.text("", 12, muted)
     private var stage = if (store.flag("guided", true) && prediction !in 0..2) 0 else 1
     private var dragStart = values.copyOf()
     private val trends = listOf("تزيد", "تنقص", "تبقى ثابتة")
@@ -91,9 +94,20 @@ internal class LabWorkbench(
         theatre.addView(simulation, LinearLayout.LayoutParams(-1, 0, 1f))
         chart.background = ui.shape(ui.surface)
         ui.pad(chart, 10, 5)
-        val chartTitle = ui.text(topic.metric + "  /  " + topic.controls[graphAxis(topic)].label, 14, muted)
-        ui.add(chart, chartTitle)
-        ui.add(chart, curve, 4, 103)
+        val chartHead = ui.row()
+        chartHead.addView(chartTitle, LinearLayout.LayoutParams(0, -2, 1f))
+        if (topic.controls.size > 1) {
+            val pick = command("axis", "محور X", 13) { selectAxis() }.apply {
+                minimumHeight = 0
+                ui.pad(this, 8, 2)
+            }
+            chartHead.addView(pick, LinearLayout.LayoutParams(ui.dp(84), ui.dp(30)).apply { marginStart = ui.dp(8) })
+        }
+        ui.add(chart, chartHead)
+        ui.add(chart, curve, 2, 110)
+        legend.maxLines = 1
+        legend.ellipsize = android.text.TextUtils.TruncateAt.END
+        ui.add(chart, legend, 1)
         ui.add(theatre, chart, 7)
 
         view.addView(theatre, LinearLayout.LayoutParams(0, -1, 1.88f))
@@ -200,7 +214,7 @@ internal class LabWorkbench(
         }
         topic.controls.forEachIndexed { index, spec ->
             val label = ui.text("", 16, ui.foreground, true)
-            val discrete = topic.id == "telecom.qam" && index == 0 || topic.id == "light.roemer"
+            val discrete = spec.discrete
             val slider = TvSlider(activity, ui, spec, accent, discrete) {
                 activeControl = index
                 values[index] = it
@@ -251,7 +265,7 @@ internal class LabWorkbench(
         indices.forEachIndexed { order, index ->
             val control = topic.controls[index]
             val fraction = if (order == 0) x else y
-            val step = if (topic.id == "telecom.qam" && index == 0 || topic.id == "light.roemer") 1.0 else control.step
+            val step = control.step
             val delta = ((control.max - control.min) * fraction / step).roundToInt() * step
             values[index] = control.clamp(dragStart[index] + delta)
         }
@@ -323,6 +337,40 @@ internal class LabWorkbench(
         refresh()
     }
 
+    private fun axisLabel(symbol: String, unit: String): String =
+        if (unit.isEmpty()) symbol else "$symbol ($unit)"
+
+    private fun selectAxis() {
+        val labels = topic.controls.map { it.label + " • " + ltr(axisLabel(it.symbol, it.unit)) }
+        AlertDialog.Builder(activity).setTitle("المتغيّر على محور X")
+            .setSingleChoiceItems(labels.toTypedArray(), chartAxis) { dialog, index ->
+                chartAxis = index
+                dialog.dismiss()
+                refresh()
+            }.setNegativeButton("رجوع", null).show()
+    }
+
+    private fun describeConfiguration(configuration: DoubleArray): String =
+        topic.controls.indices.filter { it != chartAxis }.joinToString(" · ") { i ->
+            val control = topic.controls[i]
+            control.symbol + "=" + formatControl(topic, i, configuration[i]) +
+                if (control.unit.isEmpty()) "" else " " + control.unit
+        }
+
+    private fun refreshChart() {
+        val x = topic.controls[chartAxis]
+        val scaleLabel = if (topic.id == "scale.power-ratio") "  •  Y لوغاريتمي" else ""
+        chartTitle.text = "Y " + ltr(axisLabel(topic.symbol, topic.unit)) +
+            "   /   X " + ltr(axisLabel(x.symbol, x.unit)) + scaleLabel
+        val fixed = describeConfiguration(values)
+        val saved = baseline?.let(::describeConfiguration)
+        val currentLabel = if (fixed.isEmpty()) "● الحالي" else "● الحالي (" + ltr(fixed) + ")"
+        val baselineLabel = if (saved.isNullOrEmpty()) "المحفوظ" else "المحفوظ (" + ltr(saved) + ")"
+        val baselineMark = if (x.discrete) "▪" else "┄"
+        legend.text = currentLabel + if (baseline == null) "" else "   $baselineMark $baselineLabel"
+        curve.update(values, baseline, chartAxis)
+    }
+
     private fun refresh() {
         refreshPlayback()
         hero.values = values
@@ -332,10 +380,10 @@ internal class LabWorkbench(
         juxtapose.text = if (compare) "✓ ماذا لو؟" else "ماذا لو؟"
         plot.text = if (showGraph) "✓ المنحنى" else "المنحنى"
         chart.visibility = if (showGraph) View.VISIBLE else View.GONE
-        if (showGraph) curve.update(values, baseline)
+        if (showGraph) refreshChart()
         val current = reading(topic, values)
         number.setTextColor(if (topic.id == "telecom.link-budget" && current < 0) 0xfffb7185.toInt() else 0xff4ade80.toInt())
-        number.text = ltr(fmt(current, if (topic.id == "mechanics.newton2") 1 else 2) + headlineUnit(topic))
+        number.text = if (current.isFinite()) ltr(fmt(current, if (topic.id == "mechanics.newton2") 1 else 2) + headlineUnit(topic)) else "—"
         val detail = labReadout(topic, values)
         val rich = topic.id in detailedReadouts || (topic.legacy ?: -1) >= 12 && topic.id != "mechanics.newton2"
         output.text = if (rich) detail else ""
@@ -346,16 +394,15 @@ internal class LabWorkbench(
             val old = reading(topic, reference)
             val result = actual(value, old)
             val verdict = if (prediction in 0..2 && value.isFinite() && old.isFinite()) "  •  النتيجة ${trends[result]}" else ""
-            "Δ " + ltr(fmt(value - old, 3)) + verdict
+            if (value.isFinite() && old.isFinite()) "Δ " + ltr(fmt(value - old, 3) + headlineUnit(topic)) + verdict else ""
         } else if (store.done(topic)) "✓ تجربة مكتملة" else ""
         comparison.visibility = if (comparison.text.isEmpty()) View.GONE else View.VISIBLE
         if (stage == 1) values.forEachIndexed { index, value ->
             sliderRefs[index].show(value)
-            val digits = if (sliderRefs[index].discrete) 0 else 2
-            val readout = if (topic.id == "telecom.qam" && index == 0) {
-                (1 shl com.alradhy.discoverylab.ScienceExtensions.qamBits(value)).toString() + "-QAM"
-            } else fmt(value, digits)
-            labels[index].text = topic.controls[index].label + "   " + ltr(readout)
+            val control = topic.controls[index]
+            val readout = formatControl(topic, index, value)
+            val unit = if (control.unit.isEmpty()) "" else " " + control.unit
+            labels[index].text = control.label + "   " + ltr(readout + unit)
         }
     }
 

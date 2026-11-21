@@ -1,11 +1,11 @@
 package com.alradhy.discovery
 
 import com.alradhy.discoverylab.LabCatalog
-import com.alradhy.discoverylab.PhysicsModels
+import com.alradhy.discoverylab.ExpansionModels
+import com.alradhy.discoverylab.MuseumMeasurements
 import com.alradhy.discoverylab.ScienceExtensions as Science
 import java.util.Locale
 import kotlin.math.abs
-import kotlin.math.exp
 
 internal fun fmt(number: Double, digits: Int = 2): String {
     if (!number.isFinite()) return "—"
@@ -34,26 +34,26 @@ internal fun presets(topic: Topic): List<Preset> = when (topic.id) {
     else -> emptyList()
 }
 
-internal fun graphAxis(topic: Topic): Int = if (topic.id == "telecom.qam") 1 else 0
+internal fun graphAxis(topic: Topic): Int = topic.axis
 
-internal fun reading(topic: Topic, p: DoubleArray): Double {
-    topic.legacy?.let { return PhysicsModels.metric(it, p[0], p[1], p.getOrElse(2) { 2.0 }) }
-    return when (topic.id) {
-        "telecom.link-budget" -> Science.linkStages(p).last() - p[8]
-        "telecom.fresnel" -> Science.clearancePercent(p)
-        "telecom.qam" -> p[2] * Science.qamBits(p[0]) * (1 - Science.symbolError(p[0], p[1]))
-        "telecom.orbit-latency" -> Science.satelliteRtt(p[0], p[1])
-        "light.galileo" -> Science.galileoMicroseconds(p[0])
-        "light.roemer" -> Science.roemerDelay(p[0])
-        "light.fizeau" -> Science.fizeauBrightness(p[0], p[1])
-        "fields.rc" -> 5 * (1 - exp(-p[0] / p[1]))
-        "fields.wire" -> 20 * p[1] / p[0]
-        else -> error("Missing model for ${topic.id}")
-    }
+internal fun formatControl(topic: Topic, index: Int, value: Double, digits: Int = 2): String {
+    if (topic.id == "telecom.qam" && index == 0) return (1 shl Science.qamBits(value)).toString() + "-QAM"
+    if (topic.id == "telecom.nr-grid" && index == 1) return fmt(value, 0) + " (" + fmt(15 * Math.pow(2.0, value), 0) + " kHz)"
+    val spec = topic.controls[index]
+    val precision = if (spec.discrete) 0 else if (spec.step <= .0001) 4 else digits
+    return fmt(value, precision)
 }
+
+internal val Topic.isExpansion: Boolean get() = ExpansionModels.MODELS.containsKey(id)
+
+
+internal fun reading(topic: Topic, p: DoubleArray): Double =
+    MuseumMeasurements.measure(topic.id, topic.legacy ?: -1, p)
 
 internal fun labReadout(topic: Topic, p: DoubleArray): String {
     val value = reading(topic, p)
+    if (topic.id == "light.total-reflection" && value.isFinite() && abs(value - 90) < 1e-5)
+        return "الشعاع المنكسر يلامس السطح عند الزاوية الحرجة"
     topic.legacy?.takeIf { it >= 12 }?.let { return LabCatalog.D[it - 12].r_(p[0], p[1]) }
     return when (topic.id) {
         "telecom.link-budget" -> {
@@ -77,15 +77,8 @@ internal fun labReadout(topic: Topic, p: DoubleArray): String {
 
 internal val detailedReadouts = setOf("telecom.link-budget", "telecom.fresnel", "telecom.qam", "telecom.orbit-latency", "light.galileo", "light.fizeau")
 
-internal fun headlineUnit(topic: Topic): String = when (topic.id) {
-    "mechanics.newton2", "mechanics.friction", "astro.gravity" -> " m/s²"
-    "telecom.link-budget" -> " dB"
-    "telecom.fresnel", "light.fizeau" -> "%"
-    "telecom.qam" -> " Mb/s"
-    "telecom.orbit-latency" -> " ms"
-    "light.galileo" -> " µs"
-    "light.roemer", "mechanics.pendulum", "mechanics.spring" -> " s"
-    "fields.rc" -> " V"
-    "fields.wire" -> " µT"
-    else -> ""
+internal fun headlineUnit(topic: Topic): String = when (topic.unit) {
+    "" -> ""
+    "%", "°", "×" -> topic.unit
+    else -> " " + topic.unit
 }

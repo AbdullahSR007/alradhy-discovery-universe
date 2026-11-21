@@ -1,9 +1,10 @@
 package com.alradhy.discovery
 
 import android.content.Context
-import android.content.res.ColorStateList
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.ClipDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.Gravity
 import android.view.KeyEvent
@@ -19,6 +20,7 @@ import kotlin.math.roundToInt
 
 internal val paper = 0xffe8eef9.toInt()
 internal val muted = 0xffa6b7d2.toInt()
+internal val gold = 0xffffcc19.toInt()
 internal val teal = 0xff5eead4.toInt()
 internal val panel = 0xff111a2e.toInt()
 internal val stroke = 0xff263654.toInt()
@@ -154,13 +156,31 @@ internal class TvSlider(
         isFocusable = true
         isFocusableInTouchMode = true
         minimumHeight = ui.dp(37)
-        progressTintList = ColorStateList.valueOf(accent)
-        thumbTintList = ColorStateList.valueOf(accent)
-        progressBackgroundTintList = ColorStateList.valueOf(0xff39496a.toInt())
-        ui.pad(this, 10, 3)
+        val track = ui.shape(0xff26354e.toInt(), 0xff26354e.toInt(), 4)
+        val tint = ui.shape(accent, accent, 4)
+        progressDrawable = LayerDrawable(arrayOf(track, ClipDrawable(tint, Gravity.LEFT, ClipDrawable.HORIZONTAL))).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+            for (index in 0..1) {
+                setLayerHeight(index, ui.dp(6))
+                setLayerGravity(index, Gravity.CENTER_VERTICAL or Gravity.FILL_HORIZONTAL)
+            }
+        }
+        fun knob(fill: Int, border: Int, thickness: Int) = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setSize(ui.dp(27), ui.dp(27))
+            setColor(fill)
+            setStroke(ui.dp(thickness), border)
+        }
+        thumb = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_focused), knob(0xff0b1222.toInt(), accent, 3))
+            addState(intArrayOf(), knob(accent, 0xff0b1222.toInt(), 3))
+        }
+        thumbOffset = ui.dp(13)
+        ui.pad(this, 8, 3)
         background = StateListDrawable().apply {
-            addState(intArrayOf(android.R.attr.state_focused), ui.shape(0xff1c2d49.toInt(), accent, thickness = 3))
-            addState(intArrayOf(), ui.shape(ui.surface))
+            addState(intArrayOf(android.R.attr.state_focused), ui.shape(0xff142139.toInt(), 0xff293a58.toInt(), radius = 12))
+            addState(intArrayOf(), ui.shape(ui.surface, ui.surface, radius = 12))
         }
         setOnHoverListener { v, event ->
             if (event.actionMasked == MotionEvent.ACTION_HOVER_ENTER && v.hasWindowFocus()) v.requestFocus()
