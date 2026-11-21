@@ -62,7 +62,7 @@ internal class CurveView(context: Context, private val topic: Topic, private val
 
     private fun axisValue(value: Double, digits: Int): String {
         return if (topic.id == "telecom.qam" && axis == 0) (1 shl (2 + 2 * value.roundToInt())).toString()
-        else label(value, digits.coerceAtLeast(if (topic.id == "telecom.availability") 4 else 0))
+        else label(value, digits.coerceAtLeast(if (topic.controls[axis].step <= .0001) 4 else 0))
     }
 
     private fun label(value: Double, digits: Int): String {

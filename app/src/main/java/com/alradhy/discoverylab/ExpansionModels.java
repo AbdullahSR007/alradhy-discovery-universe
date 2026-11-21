@@ -53,7 +53,42 @@ public final class ExpansionModels {
         models.put("telecom.eirp", p -> p[0] - p[1] + p[2]);
         models.put("telecom.power-sum", p -> dbmSum(p[0], p[1]));
         models.put("telecom.tilt", p -> p[1] / tan(toRadians(p[0])));
+        models.put("matter.cell-size", p -> 3 / p[0]);
+        models.put("matter.osmosis", p -> 8.314462618 * (p[1] + 273.15) * p[0] / 1000);
+        models.put("matter.enzyme-curve", p -> 100 * p[0] / (p[0] + p[1]));
+        models.put("matter.respiration", p -> 6 * p[0] * p[1] / 100);
+        models.put("matter.selection", p -> p[0] / (1 - p[1] / 100 * pow(1 - p[0] / 100, 2)));
+        models.put("matter.hardy", p -> 2 * p[0] * (1 - p[0] / 100));
+        models.put("matter.drift", p -> 2 * p[2] * (1 - p[2] / 100) * pow(1 - 1 / (2 * p[1]), p[0]));
+        models.put("matter.founder", p -> 100 * pow(1 - p[1] / 100, 2 * p[0]));
+        models.put("matter.clock", p -> p[0] / (2 * p[1]));
+        models.put("matter.inheritance", p -> p[0] * p[1] / 100);
+        models.put("matter.cardiac-output", p -> p[0] * p[1] / 1000);
+        models.put("matter.ventilation", p -> (p[0] - p[1]) * p[2] / 1000);
+        models.put("matter.oxygen", p -> 1.34 * p[0] * p[1] / 100 + .0031 * p[2]);
+        models.put("matter.nerve-delay", p -> 1000 * p[0] / p[1]);
+        models.put("matter.accommodation", p -> 100 / p[0]);
+        models.put("matter.turnover", p -> 100 * pow(2, -p[0] / p[1]));
+
+        models.put("telecom.cp-guard", p -> p[0] - p[1] - p[2]);
+        models.put("telecom.rf-doppler", p -> p[0] / 3.6 * p[1] * 1e9 / C * cos(toRadians(p[2])));
+        models.put("telecom.coherence", p -> 423 / p[0]);
+        models.put("telecom.tdd-capacity", p -> p[0] * p[1] * p[2] / 10000);
+        models.put("telecom.bler-goodput", p -> p[0] * (1 - p[1] / 100));
+        models.put("telecom.mimo-modes", p -> p[0] * (spectralCapacity(p[1]) + spectralCapacity(p[2])));
+        models.put("telecom.noise-rise", p -> 10 * log10(1 + p[0] * pow(10, (p[1] - p[2]) / 10)));
+        models.put("telecom.pon-split", p -> 10 * p[0] * log10(2) + p[1]);
+        models.put("telecom.otdr", p -> C * p[0] * 1e-9 / (2 * p[1]));
+        models.put("telecom.queue", p -> 1000 * p[0] / (p[1] * (100 - p[0])));
+        models.put("telecom.packet-efficiency", p -> 100 * p[0] / (p[0] + p[1]));
+        models.put("telecom.time-asymmetry", p -> (p[0] - p[1]) / 2);
+        models.put("telecom.dual-route", p -> 525600 * (1 - p[0] / 100) * (1 - p[1] / 100));
+        models.put("telecom.a3-margin", p -> p[0] - p[1] - p[2] - p[3]);
         return Collections.unmodifiableMap(models);
+    }
+
+    private static double spectralCapacity(double snrDb) {
+        return log1p(pow(10, snrDb / 10)) / log(2);
     }
 
     private static double dbmSum(double first, double second) {

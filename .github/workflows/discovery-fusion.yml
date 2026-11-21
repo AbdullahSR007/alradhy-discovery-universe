@@ -17,10 +17,10 @@ jobs:
     if: github.ref == 'refs/heads/feature/science-museum-v1'
     runs-on: ubuntu-24.04
     env:
-      APK: ALRADHY-Discovery-Science-Android-TV-v1.1.0.apk
+      APK: ALRADHY-Discovery-Science-Android-TV-v1.2.0.apk
       BASELINE_CERT: 07ebe30363308176995207c325f66a3986e30f73b88e7400b65f40be95163c4c
       BASELINE_PACKAGE: com.alradhy.discovery15labs.museumv05
-      BASELINE_VERSION: '17'
+      BASELINE_VERSION: '18'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -81,7 +81,7 @@ jobs:
           certificate=$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' <<< "$certs")
           [[ "$package" == "$BASELINE_PACKAGE" ]]
           [[ "$code" =~ ^[0-9]+$ && "$code" -gt "$BASELINE_VERSION" ]]
-          [[ "$version" == '1.1.0-science' ]]
+          [[ "$version" == '1.2.0-science' ]]
           [[ "$certificate" == "$BASELINE_CERT" ]]
           ! grep -q '^application-debuggable' <<< "$badging"
           sha256sum "$APK" | tee museum-sha256.txt
@@ -89,7 +89,7 @@ jobs:
       - name: Upload verified Android TV APK
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Science-Android-TV-v1.1.0
+          name: ALRADHY-Discovery-Science-Android-TV-v1.2.0
           path: |
             ${{ env.APK }}
             museum-sha256.txt
@@ -98,8 +98,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "science-museum-v1.1.0-b$GITHUB_RUN_NUMBER" "$APK" museum-sha256.txt \
+          gh release create "science-museum-v1.2.0-b$GITHUB_RUN_NUMBER" "$APK" museum-sha256.txt \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Science 1.1.0 for Android TV" \
-            --notes "88 interactive experiments across seven wings, including 30 telecom labs. Graphs share live models, show units and exact readings, and offer a selectable X axis. Signed APK verified against the installed Android TV versionCode 17 baseline." \
+            --title "ALRADHY Discovery Science 1.2.0 for Android TV" \
+            --notes "118 interactive experiments, including 44 telecom and 20 biology labs. Explore 17 illustrated milestones from the last universal common ancestor to modern humans. Signed APK verified against the installed Android TV versionCode 18 baseline." \
             --prerelease

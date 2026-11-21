@@ -38,6 +38,7 @@ internal fun graphAxis(topic: Topic): Int = topic.axis
 
 internal fun formatControl(topic: Topic, index: Int, value: Double, digits: Int = 2): String {
     if (topic.id == "telecom.qam" && index == 0) return (1 shl Science.qamBits(value)).toString() + "-QAM"
+    if (topic.id == "telecom.pon-split" && index == 0) return fmt(value, 0) + " (1:" + (1 shl value.toInt()) + ")"
     if (topic.id == "telecom.nr-grid" && index == 1) return fmt(value, 0) + " (" + fmt(15 * Math.pow(2.0, value), 0) + " kHz)"
     val spec = topic.controls[index]
     val precision = if (spec.discrete) 0 else if (spec.step <= .0001) 4 else digits

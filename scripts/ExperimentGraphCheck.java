@@ -80,7 +80,7 @@ public final class ExperimentGraphCheck {
             if (ExpansionModels.MODELS.containsKey(id)) expansions.add(id);
             labs++;
         }
-        if (labs != 88 || !expansions.equals(ExpansionModels.MODELS.keySet()))
+        if (labs != 118 || !expansions.equals(ExpansionModels.MODELS.keySet()))
             throw new AssertionError("Incomplete lab coverage " + labs + " " + expansions.size());
 
         known("scale.power-ratio", 1e3, -6, -9);
@@ -115,6 +115,37 @@ public final class ExperimentGraphCheck {
         known("telecom.eirp", 54, 40, 3, 17);
         known("telecom.power-sum", -76.9897, -80, -80);
         known("telecom.tilt", 30, 45, 30);
+        known("matter.cell-size", .3, 10);
+        known("matter.osmosis", 99.1583, 40, 25);
+        known("matter.enzyme-curve", 50, 5, 5);
+        known("matter.respiration", 6, 2, 50);
+        known("matter.selection", 100.0 / 3, 25, 400.0 / 9);
+        known("matter.hardy", 50, 50);
+        known("matter.drift", 37.5, 1, 2, 50);
+        known("matter.founder", 56.25, 1, 25);
+        known("matter.clock", 5, 20, 2);
+        known("matter.inheritance", 25, 50, 50);
+        known("matter.cardiac-output", 5.04, 72, 70);
+        known("matter.ventilation", 4.2, 500, 150, 12);
+        known("matter.oxygen", 19.9925, 15, 98, 95);
+        known("matter.nerve-delay", 14, .7, 50);
+        known("matter.accommodation", 2.5, 40);
+        known("matter.turnover", 25, 12, 6);
+        known("telecom.cp-guard", 2.2, 4.7, 2, .5);
+        known("telecom.rf-doppler", 0, 120, 3.5, 90);
+        known("telecom.rf-doppler", 389.158, 120, 3.5, 0);
+        known("telecom.coherence", 2.115, 200);
+        known("telecom.tdd-capacity", 336, 600, 70, 80);
+        known("telecom.bler-goodput", 360, 400, 10);
+        known("telecom.mimo-modes", 40, 20, 0, 0);
+        known("telecom.noise-rise", 10, 9, -100, -100);
+        known("telecom.pon-split", 16.0515, 5, 1);
+        known("telecom.otdr", 10.2109148, 100, 1.468);
+        known("telecom.queue", 3, 75, 1000);
+        known("telecom.packet-efficiency", 95, 950, 50);
+        known("telecom.time-asymmetry", 10, 120, 100);
+        known("telecom.dual-route", .5256, 99.9, 99.9);
+        known("telecom.a3-margin", 3, -95, -103, 3, 2);
         close(MuseumMeasurements.measure("mechanics.newton2", 12, new double[] {20,4}), 5);
         close(MuseumMeasurements.measure("mechanics.newton2", 12, new double[] {20,6}), 10d/3);
         close(MuseumMeasurements.measure("light.lens", 21, new double[] {21,20}), 420);
@@ -123,6 +154,6 @@ public final class ExperimentGraphCheck {
         if (!Double.isNaN(MuseumMeasurements.measure("light.total-reflection", 20, new double[] {60,1.5})))
             throw new AssertionError("Total internal reflection requires a gap");
         System.out.println("PASS " + labs + " lab graphs, " + sweeps +
-            " axis/configuration sweeps and 37 independent measurement checks.");
+            " axis/configuration sweeps and 68 independent measurement checks.");
     }
 }

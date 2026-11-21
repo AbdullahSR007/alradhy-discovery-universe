@@ -9,6 +9,7 @@ root = Path(__file__).resolve().parents[1] / "app/src/main/assets/content"
 wing_ids = {"scale", "mechanics", "fields", "light", "astro", "telecom", "matter"}
 topic_ids, legacy_indices, old_stations = set(), set(), set()
 labs = 0
+history = []
 manifest = []
 assert {file.stem for file in root.glob("*.json")} == wing_ids
 
@@ -33,6 +34,14 @@ for path in sorted(root.glob("*.json")):
             pair = (station["axis"], station["index"])
             assert pair not in old_stations and pair[0] in (0, 1) and 0 <= pair[1] < 35, key
             old_stations.add(pair)
+        if "timeline" in topic:
+            beat = topic["timeline"]
+            assert wing["id"] == "matter" and topic["section"] == "history" and not topic.get("controls"), key
+            assert isinstance(beat["yearsAgo"], int) and beat["yearsAgo"] >= 0, key
+            assert all(beat[field].strip() for field in ("date", "evidence", "credit", "related")), key
+            assert beat["source"].startswith("https://"), key
+            assert (root.parent / "exhibits" / (beat["art"] + ".webp")).is_file(), key
+            history.append(beat)
         controls = topic.get("controls", [])
         if controls:
             labs += 1
@@ -63,8 +72,15 @@ for path in sorted(root.glob("*.json")):
             assert 0 < step <= hi - lo and control["label"].strip(), key
 
 assert legacy_indices == set(range(47)), sorted(legacy_indices)
-assert labs == 88, labs
-assert sum(line.startswith("telecom.") for line in manifest) == 30
+assert labs == 118, labs
+assert sum(line.startswith("telecom.") for line in manifest) == 44
+assert sum(line.startswith("matter.") for line in manifest) == 20
+assert len(history) == 17 and all(a["yearsAgo"] > b["yearsAgo"] for a, b in zip(history, history[1:]))
+assert history[0]["yearsAgo"] == 4200000000 and history[-1]["yearsAgo"] == 0
+lab_ids = {line.split("\t", 1)[0] for line in manifest}
+assert all(beat["related"] in lab_ids for beat in history)
+for name in ("ran", "transport"):
+    assert (root.parent / "exhibits" / (name + ".webp")).is_file()
 parser = argparse.ArgumentParser()
 parser.add_argument("--graph-manifest", type=Path)
 args = parser.parse_args()

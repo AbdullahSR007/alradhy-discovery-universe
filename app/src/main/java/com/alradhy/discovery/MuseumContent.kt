@@ -19,12 +19,18 @@ internal data class Control(val label: String, val min: Double, val max: Double,
 internal data class Quiz(val question: String, val options: List<String>, val correct: Int, val explanation: String)
 internal data class OldStation(val axis: Int, val index: Int, val titleHash: Int)
 
+internal data class LifeChapter(
+    val yearsAgo: Long, val date: String, val evidence: String, val source: String,
+    val credit: String, val art: String, val related: String
+)
+
 internal data class Topic(
     val id: String, val wing: String, val title: String, val english: String, val summary: String,
     val idea: String, val equation: String, val quiz: Quiz, val visual: Int, val scale: Double?,
     val legacy: Int?, val station: OldStation?, val controls: List<Control>, val metric: String,
     val assumptions: String, val challenge: String, val note: String, val application: String, val facts: List<String>,
-    val unit: String, val symbol: String, val axis: Int
+    val unit: String, val symbol: String, val axis: Int,
+    val section: String = "", val life: LifeChapter? = null
 ) {
     val isLab get() = controls.isNotEmpty()
     fun defaults() = controls.map { it.initial }.toDoubleArray()
@@ -43,6 +49,7 @@ internal class MuseumContent(context: Context) {
     }
     val topics = wings.flatMap { it.topics }
     val labs = topics.filter { it.isLab }
+    val life = wing("matter").topics.filter { it.life != null }.sortedByDescending { it.life!!.yearsAgo }
     val scale = wings.first().topics.sortedBy { it.scale }
     val byId = topics.associateBy { it.id }
 
@@ -69,7 +76,11 @@ internal class MuseumContent(context: Context) {
             data.optString("metric"), data.optString("assumptions"), data.optString("challenge"),
             data.optString("discoveryNote"), data.optString("application"),
             facts?.let { List(it.length()) { index -> it.getString(index) } }.orEmpty(),
-            data.optString("unit"), data.optString("symbol"), data.optInt("axis")
+            data.optString("unit"), data.optString("symbol"), data.optInt("axis"),
+            data.optString("section"), data.optJSONObject("timeline")?.let {
+                LifeChapter(it.getLong("yearsAgo"), it.getString("date"), it.getString("evidence"),
+                    it.getString("source"), it.getString("credit"), it.getString("art"), it.getString("related"))
+            }
         )
     }
 

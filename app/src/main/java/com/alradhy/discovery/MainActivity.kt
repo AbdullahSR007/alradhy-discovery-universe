@@ -241,6 +241,7 @@ class MainActivity : Activity() {
         val screen = when (page.name) {
             "home" -> home()
             "wing" -> wing(content.wing(page.id), page)
+            "life" -> lifeJourney()
             "scale", "ambient" -> scale(isAmbient)
             "topic" -> topic(content.byId.getValue(page.id))
             "lab" -> lab(content.byId.getValue(page.id))
@@ -284,6 +285,7 @@ class MainActivity : Activity() {
         val heading = when (page.name) {
             "wing" -> content.wing(page.id).title
             "scale" -> "رحلة المقاييس"
+            "life" -> "من LUCA إلى الإنسان اليوم"
             "topic", "lab" -> content.wing(content.byId.getValue(page.id).wing).title
             "search" -> "بحث"
             "progress" -> "تقدّمي"
@@ -438,6 +440,7 @@ class MainActivity : Activity() {
         val complete = experiments.count(store::done)
         val caption = when {
             wing.id == "scale" -> "من طول بلانك إلى حافة الكون"
+            wing.id == "matter" -> "${experiments.size} مختبرًا  •  رحلة LUCA"
             experiments.isEmpty() -> "${wing.topics.size} موضوعًا"
             else -> "${experiments.size} مختبرًا" + if (complete > 0) "  •  $complete مكتمل" else ""
         }
@@ -479,12 +482,16 @@ class MainActivity : Activity() {
             }
         })
         if (wing.id != "scale") ui.add(menu, filter)
+        if (wing.id == "matter") {
+            ui.add(menu, action("life.start", "من LUCA إلى الإنسان اليوم", gold, 18) { open("life") }, 6)
+        }
         val list = ui.column()
         val filtered = if (wing.id == "scale") wing.topics.filter(Topic::isLab) else when (page.filter) {
             1 -> wing.topics.filter(Topic::isLab)
             2 -> wing.topics.filterNot { store.done(it) || store.starred(it) }
             else -> wing.topics
         }
+        val entries = if (wing.id == "matter") filtered.filter { it.life == null } else filtered
         val preview = FrameLayout(this)
         var currentPreview: String? = null
         fun show(item: Topic) {
@@ -495,15 +502,37 @@ class MainActivity : Activity() {
                 background = ui.shape(ui.surface)
                 ui.pad(this, 11, 10)
             }
-            inner.addView(visual(item, wing.color), LinearLayout.LayoutParams(-1, 0, 1f))
+            val art = if (item.wing == "telecom" && item.section.isNotBlank()) {
+                when (item.section) {
+                    "ran", "rf" -> "ran"
+                    "optical", "transport" -> "transport"
+                    else -> null
+                }
+            } else null
+            inner.addView(if (art == null) visual(item, wing.color) else pictures.view(this, art),
+                LinearLayout.LayoutParams(-1, 0, 1f))
+            if (art != null) ui.add(inner, ui.text("رسم توضيحي للمجال", 11, muted), 3)
             ui.add(inner, ui.text(item.title, 22, ui.foreground, true), 8)
             ui.add(inner, ui.number(item.equation, 15, wing.color), 4)
             ui.add(inner, ui.text(item.summary, 17, muted).apply { maxLines = 3 }, 7)
             preview.addView(inner, FrameLayout.LayoutParams(-1, -1))
         }
-        if (filtered.isEmpty()) ui.add(list, ui.text("ما فيه مواضيع بهذا الفلتر", 19, muted), 12)
-        val groups = if (wing.id == "telecom") filtered.groupBy { telecomSection(it.id) }
-            else linkedMapOf("" to filtered)
+        if (entries.isEmpty()) ui.add(list, ui.text("ما فيه مواضيع بهذا الفلتر", 19, muted), 12)
+        val groups = when (wing.id) {
+            "telecom" -> entries.groupBy(::telecomSection).toSortedMap(compareBy {
+                listOf("شبكات النفاذ  ·  RAN", "الانتشار والهوائيات  ·  RF", "الألياف الضوئية",
+                    "النقل وزمن الشبكة", "الإشارة والتضمين").indexOf(it)
+            })
+            "matter" -> entries.groupBy {
+                when (it.section) {
+                    "cells" -> "الخلايا والطاقة"
+                    "evolution" -> "الوراثة والتطوّر"
+                    "human" -> "وظائف جسم الإنسان"
+                    else -> "المادة والكائنات الحية"
+                }
+            }
+            else -> linkedMapOf("" to entries)
+        }
         groups.forEach { (heading, items) ->
             if (heading.isNotBlank()) ui.add(list, ui.text(heading, 15, wing.color, true), 10)
             items.forEach { item ->
@@ -517,20 +546,30 @@ class MainActivity : Activity() {
                 ui.add(list, button, 7)
             }
         }
-        filtered.firstOrNull()?.let { show(it); preferred = "item.${it.id}" }
+        groups.values.firstOrNull()?.firstOrNull()?.let { show(it); preferred = "item.${it.id}" }
+        if (wing.id == "matter" && page.filter == 0) preferred = "life.start"
         menu.addView(ui.scroll(list), LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(6) })
         body.addView(menu, LinearLayout.LayoutParams(0, -1, 1f))
         body.addView(preview, LinearLayout.LayoutParams(0, -1, 1.13f).apply { marginStart = ui.dp(12) })
         return body
     }
 
-    private fun telecomSection(id: String): String = when (id.substringAfter('.')) {
+    private fun telecomSection(topic: Topic): String {
+        when (topic.section) {
+            "ran" -> return "شبكات النفاذ  ·  RAN"
+            "rf" -> return "الانتشار والهوائيات  ·  RF"
+            "optical" -> return "الألياف الضوئية"
+            "transport" -> return "النقل وزمن الشبكة"
+            "signal" -> return "الإشارة والتضمين"
+        }
+        return when (topic.id.substringAfter('.')) {
         "nr-grid", "rsrq", "sinr", "sensitivity", "cell-radius" -> "شبكات النفاذ  ·  RAN"
         "fresnel", "rain", "link-budget", "friis", "fspl", "wavelength", "horizon", "dish", "tilt",
         "eirp", "vswr", "power-sum" -> "الانتشار والهوائيات  ·  RF"
         "fiber", "optical-budget", "dispersion" -> "الألياف الضوئية"
         "packet-delay", "availability", "satellite", "orbit-latency" -> "النقل وزمن الشبكة"
         else -> "الإشارة والتضمين"
+        }
     }
 
     private fun visual(item: Topic, color: Int): View = if (item.isLab) ExperimentView(this, item, color).apply {
@@ -613,7 +652,7 @@ class MainActivity : Activity() {
     }
 
     private fun topic(item: Topic): View {
-        val color = content.wing(item.wing).color
+        val color = if (item.life == null) content.wing(item.wing).color else gold
         val body = ui.row().apply { gravity = Gravity.TOP }
         val info = ui.column().apply {
             background = ui.shape(ui.surface)
@@ -621,22 +660,106 @@ class MainActivity : Activity() {
         }
         ui.add(info, ui.text(item.title, 31, ui.foreground, true))
         ui.add(info, ui.number(item.english, 13, muted), 4)
+        item.life?.let { ui.add(info, ui.text(it.date, 17, gold, true), 4) }
         if (item.equation.isNotBlank()) ui.add(info, ui.number(item.equation, 21, color), 10)
-        ui.add(info, ui.text(item.summary, 21), 10)
-        if (item.idea != item.summary) ui.add(info, ui.text(item.idea, 19, ui.foreground, true), 9)
+        fun paragraph(key: String, text: String, size: Int, emphasized: Boolean = false): TextView =
+            ui.text(text, size, ui.foreground, emphasized).apply {
+                if (item.life != null) {
+                    isFocusable = true
+                    ui.pad(this, 6, 4)
+                    background = android.graphics.drawable.StateListDrawable().apply {
+                        addState(intArrayOf(android.R.attr.state_focused), ui.shape(0xff1e2a40.toInt(), gold, 7))
+                        addState(intArrayOf(), ui.shape(ui.surface, ui.surface, 7))
+                    }
+                    bind(key, this)
+                }
+            }
+        ui.add(info, paragraph("topic.story", item.summary, 21), 10)
+        if (item.idea != item.summary) ui.add(info, paragraph("topic.caveat", item.idea, 19, true), 9)
+        item.life?.let {
+            ui.add(info, ui.text("الدليل", 18, gold, true), 10)
+            ui.add(info, paragraph("topic.evidence", it.evidence, 19), 5)
+            ui.add(info, ui.text(it.credit, 12, muted), 7)
+        }
         item.facts.forEach { ui.add(info, ui.text(it, 17, color), 7) }
         if (item.note.isNotBlank()) ui.add(info, ui.text(item.note, 16, muted), 9)
         val buttons = ui.row()
         val choices = buildList<View> {
             if (item.isLab) add(action("topic.lab", "افتح التجربة", color, 16) { open("lab", item.id) })
+            item.life?.let { chapter -> add(action("topic.related", "تجربة مرتبطة", color, 15) { open("lab", chapter.related) }) }
             add(action("topic.quiz", "اختبر فهمك", color, 16) { quiz(item) })
             if (store.flag("narration", true)) add(action("topic.speak", "استمع", color, 15) { speak(item.title + ". " + item.summary) })
         }
         ui.cells(buttons, choices)
         ui.add(info, buttons, 11)
-        preferred = if (item.isLab) "topic.lab" else "topic.quiz"
+        preferred = when {
+            item.life != null -> "topic.story"
+            item.isLab -> "topic.lab"
+            else -> "topic.quiz"
+        }
         body.addView(ui.scroll(info), LinearLayout.LayoutParams(0, -1, 1f))
-        body.addView(visual(item, color), LinearLayout.LayoutParams(0, -1, 1.4f).apply { marginStart = ui.dp(12) })
+        val art = if (item.life == null) visual(item, color) else ui.column().apply {
+            addView(pictures.view(this@MainActivity, item.life.art), LinearLayout.LayoutParams(-1, 0, 1f))
+            ui.add(this, ui.text("رسم توضيحي للحقبة", 12, muted), 5)
+        }
+        body.addView(art, LinearLayout.LayoutParams(0, -1, 1.4f).apply { marginStart = ui.dp(12) })
+        return body
+    }
+
+    private val pictures = ExhibitPictures()
+
+    private fun lifeJourney(): View {
+        val body = ui.row().apply { gravity = Gravity.TOP }
+        val directory = ui.column()
+        val list = ui.column()
+        val card = ui.column().apply {
+            background = ui.shape(ui.surface, 0xff4d4330.toInt(), 16)
+            ui.pad(this, 12, 9)
+        }
+        val title = ui.text("", 24, ui.foreground, true)
+        val date = ui.text("", 17, gold, true)
+        val summary = ui.text("", 18, muted).apply {
+            maxLines = 3
+            ellipsize = android.text.TextUtils.TruncateAt.END
+        }
+        val caption = ui.text("رسم توضيحي للحقبة", 11, muted)
+        val image = pictures.view(this, content.life.first().life!!.art)
+        val rail = LifeRuler(this, content.life.map { it.life!!.yearsAgo })
+        var selected = content.life.first()
+        val details = action("life.detail", "اقرأ الدليل", gold, 16) { open("topic", selected.id) }
+        fun preview(index: Int, item: Topic) {
+            selected = item
+            val chapter = requireNotNull(item.life)
+            title.text = item.title
+            date.text = chapter.date
+            summary.text = item.summary
+            pictures.show(image, chapter.art)
+            rail.selected = index
+        }
+        ui.add(directory, ui.text("${content.life.size} محطة  •  اختر محطة بالأسهم", 14, gold, true))
+        content.life.forEachIndexed { index, item ->
+            val action = action("life.${item.id}", item.title, gold, 17) {
+                open("topic", item.id)
+            }
+            val focus = action.onFocusChangeListener
+            action.onFocusChangeListener = View.OnFocusChangeListener { view, selected ->
+                focus?.onFocusChange(view, selected)
+                if (selected) preview(index, item)
+            }
+            ui.add(list, action, 6)
+        }
+        directory.addView(ui.scroll(list), LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(5) })
+        ui.add(card, date)
+        ui.add(card, title, 3)
+        card.addView(image, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(7) })
+        ui.add(card, caption, 3)
+        ui.add(card, rail, 3, 34)
+        ui.add(card, summary, 4)
+        ui.add(card, details, 7)
+        preview(0, selected)
+        preferred = "life.${selected.id}"
+        body.addView(directory, LinearLayout.LayoutParams(0, -1, .8f))
+        body.addView(card, LinearLayout.LayoutParams(0, -1, 1.2f).apply { marginStart = ui.dp(12) })
         return body
     }
 
@@ -811,7 +934,7 @@ class MainActivity : Activity() {
         setting("tts.speed", "سرعة القراءة", listOf("بطيئة", "عادية", "سريعة")[speed]) { store.set("tts.speed", (speed + 1) % 3) }
         toggle("sound", "صوت الإجابة")
         ui.add(box, action("settings.preview", "ابدأ عرض المقاييس الآن", teal, 19) { open("ambient") }, 6)
-        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.1.0\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
+        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.2.0\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
         preferred = "settings.text"
         return ui.scroll(box)
     }
