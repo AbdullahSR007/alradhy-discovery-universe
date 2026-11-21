@@ -286,7 +286,9 @@ class MainActivity : Activity() {
             if (page.name == "home") {
                 val emblem = WingGlyph(this@MainActivity, "observatory", 0xff38bdf8.toInt())
                 addView(emblem, LinearLayout.LayoutParams(ui.dp(29), ui.dp(29)).apply { marginEnd = ui.dp(9) })
-                addView(ui.text("ALRADHY Discovery  •  متحف العلوم", 21, ui.foreground, true),
+                addView(ui.text("ALRADHY Discovery  •  متحف العلوم", 21, ui.foreground, true).apply {
+                    gravity = Gravity.RIGHT or Gravity.CENTER_VERTICAL
+                },
                     LinearLayout.LayoutParams(0, -1, 1f))
                 val tools = ui.row()
                 val stars = content.topics.count(store::starred)
@@ -351,13 +353,13 @@ class MainActivity : Activity() {
             background = GalaxyBackground()
             ui.pad(this, 17, 8)
         }
-        val main = ui.column()
+        val main = ui.column().apply { gravity = Gravity.CENTER_VERTICAL }
         val displayName = if (item.id == "telecom.link-budget") "ميزانية الوصلة الراديوية" else item.title
         val headline = if (item.id == "telecom.link-budget")
-            "هل تصل إشارة 80 GHz لمسافة 2 km في المطر؟ احسب هامش الأمان بنفسك." else item.summary
-        ui.add(main, ui.text("تجربة اليوم  •  علوم الاتصالات", 15, color, true))
-        ui.add(main, ui.text(displayName, 32, ui.foreground, true), 5)
-        ui.add(main, ui.text(headline, 17, muted).apply { maxLines = 2 }, 5)
+            "هل تصل إشارة ${ltr("80 GHz")} لمسافة ${ltr("2 km")} في المطر؟ احسب هامش الأمان بنفسك." else item.summary
+        ui.add(main, ui.text("تجربة اليوم  •  علوم الاتصالات", 14, color, true), height = 22)
+        ui.add(main, ui.text(displayName, 27, ui.foreground, true), 2, 40)
+        ui.add(main, ui.text(headline, 16, muted).apply { maxLines = 2 }, 3, 45)
         val actions = ui.row()
         val launch = action("hero", "▷  ابدأ التجربة", color, 16) { open("lab", item.id) }.apply {
             minimumHeight = ui.dp(36)
@@ -376,14 +378,14 @@ class MainActivity : Activity() {
         actions.addView(rotate, LinearLayout.LayoutParams(-2, -2).apply { marginStart = ui.dp(7) })
         launch.nextFocusLeftId = rotate.id
         rotate.nextFocusRightId = launch.id
-        ui.add(main, actions, 8)
-        hero.addView(main, LinearLayout.LayoutParams(0, -2, 1.0f))
+        ui.add(main, actions, 4, 35)
+        hero.addView(main, LinearLayout.LayoutParams(0, -1, 1.0f))
         hero.addView(ExperimentView(this, item, color).apply {
             presentation = true
             running = ui.motion
             contentDescription = item.english
         }, LinearLayout.LayoutParams(0, -1, 1.05f).apply { marginStart = ui.dp(15) })
-        ui.add(column, hero, height = 159)
+        ui.add(column, hero, height = 174)
         preferred = "wing.telecom"
 
         val order = listOf("scale", "mechanics", "fields", "light", "astro", "telecom", "matter")
@@ -403,14 +405,18 @@ class MainActivity : Activity() {
                 if (recent == null) open("scale") else open("lab", recent.id)
             }
         ))
-        ui.add(column, daily, 11)
+        ui.add(column, daily, 16)
         val rest = store.recent().drop(1)
         if (rest.isNotEmpty()) {
             val r = ui.row()
             ui.cells(r, rest.map { prior -> action("recent.${prior.id}", prior.title, teal, 15) { open("lab", prior.id) } })
             ui.add(column, r, 9)
         }
-        return ui.scroll(column)
+        return ui.scroll(column).apply {
+            clipChildren = true
+            clipToPadding = true
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
     }
 
     private fun dailyTopic(): Topic {
@@ -780,7 +786,7 @@ class MainActivity : Activity() {
         setting("tts.speed", "سرعة القراءة", listOf("بطيئة", "عادية", "سريعة")[speed]) { store.set("tts.speed", (speed + 1) % 3) }
         toggle("sound", "صوت الإجابة")
         ui.add(box, action("settings.preview", "ابدأ عرض المقاييس الآن", teal, 19) { open("ambient") }, 6)
-        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.0.0\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
+        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.0.1\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
         preferred = "settings.text"
         return ui.scroll(box)
     }

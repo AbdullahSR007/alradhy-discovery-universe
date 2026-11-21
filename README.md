@@ -12,7 +12,7 @@ An offline Arabic science museum with seven wings, 108 exhibits and 56 interacti
 
 Use JDK 17, Gradle 8.9, Android SDK 34 and build-tools 34.0.0. Run `gradle :app:assembleDebug` for internal emulator testing. The feature-branch workflow builds the signed release, validates content and equations, and checks the final APK's package, version code and certificate against the installed V0.7.0 baseline before publishing.
 
-The application ID is `com.alradhy.discovery15labs.museumv05` and this release uses versionCode 15. On its first launch the app copies legacy experimental settings and observations to stable IDs. It keeps the three existing SharedPreferences files available in their original form.
+The application ID is `com.alradhy.discovery15labs.museumv05` and this release uses versionCode 16. On its first launch the app copies legacy experimental settings and observations to stable IDs. It keeps the three existing SharedPreferences files available in their original form.
 
 ## Model references
 
