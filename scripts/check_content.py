@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""Validate the packaged museum exhibits and their stable IDs."""
+import json
+import math
+from pathlib import Path
+
+root = Path(__file__).resolve().parents[1] / "app/src/main/assets/content"
+wing_ids = {"scale", "mechanics", "fields", "light", "astro", "telecom", "matter"}
+topic_ids, legacy_indices, old_stations = set(), set(), set()
+labs = 0
+assert {file.stem for file in root.glob("*.json")} == wing_ids
+
+for path in sorted(root.glob("*.json")):
+    wing = json.loads(path.read_text(encoding="utf-8"))
+    assert wing["id"] == path.stem
+    assert wing["topics"], path
+    for topic in wing["topics"]:
+        key = topic["id"]
+        assert key.startswith(wing["id"] + ".") and key not in topic_ids, key
+        topic_ids.add(key)
+        assert all(topic[name].strip() for name in ("titleAr", "titleEn", "summary", "keyIdea")), key
+        quiz = topic["quiz"]
+        options = quiz["options"]
+        assert len(options) == len(set(options)) == 4 and all(options), key
+        assert 0 <= quiz["correctIndex"] < len(options), key
+        assert quiz["question"].strip() and quiz["explanation"].strip(), key
+        if "scaleMeters" in topic:
+            assert wing["id"] == "scale" and math.isfinite(topic["scaleMeters"]) and topic["scaleMeters"] > 0, key
+        if "legacyStation" in topic:
+            station = topic["legacyStation"]
+            pair = (station["axis"], station["index"])
+            assert pair not in old_stations and pair[0] in (0, 1) and 0 <= pair[1] < 35, key
+            old_stations.add(pair)
+        controls = topic.get("controls", [])
+        if controls:
+            labs += 1
+            assert all(topic.get(name, "").strip() for name in ("metric", "assumptions", "challenge", "application")), key
+        if "legacyIndex" in topic:
+            index = topic["legacyIndex"]
+            assert index not in legacy_indices and len(controls) == (3 if index == 2 else 2), key
+            legacy_indices.add(index)
+        for control in controls:
+            lo, default, hi, step = (control[field] for field in ("min", "init", "max", "step"))
+            assert all(map(math.isfinite, (lo, default, hi, step))), key
+            # Legacy defaults may intentionally start at a range endpoint.
+            assert (lo <= default <= hi if "legacyIndex" in topic else lo < default < hi), key
+            assert 0 < step <= hi - lo and control["label"].strip(), key
+
+assert legacy_indices == set(range(47)), sorted(legacy_indices)
+assert labs == 56, labs
+print(f"Validated {len(wing_ids)} wings, {len(topic_ids)} exhibits and {labs} labs.")

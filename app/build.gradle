@@ -11,8 +11,8 @@ android {
         applicationId "com.alradhy.discovery15labs.museumv05"
         minSdk 24
         targetSdk 34
-        versionCode 14
-        versionName "0.7.0-museum"
+        versionCode 15
+        versionName "1.0.0-science"
     }
 
     // Stable signing: when the key is provided (CI secrets) every build carries the SAME
@@ -35,6 +35,7 @@ android {
         }
         release {
             minifyEnabled false
+            if (stableKeystore) signingConfig signingConfigs.stable
         }
     }
     compileOptions {

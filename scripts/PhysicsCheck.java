@@ -1,5 +1,6 @@
 import com.alradhy.discoverylab.LabCatalog;
 import com.alradhy.discoverylab.PhysicsModels;
+import com.alradhy.discoverylab.ScienceExtensions;
 
 /** Plain-javac checks of the app's real physics code (run in CI, no Android needed). */
 public class PhysicsCheck {
@@ -86,6 +87,25 @@ public class PhysicsCheck {
             }
             yes("Lab " + i + " monotone in first control", true);
         }
+        double[] budget = {2,80,18,1,43,43,1,6,-72};
+        check("80 GHz 2 km FSPL", ScienceExtensions.linkLoss(budget), 136.52239965);
+        check("80 GHz receive power", ScienceExtensions.linkStages(budget)[6], -40.52239965);
+        budget[7] += 10;
+        check("10 dB rain lowers receive power by 10 dB", ScienceExtensions.linkStages(budget)[6], -50.52239965);
+        check("6 GHz 40 km midpath F1", ScienceExtensions.fresnelRadius(40,6,.5), 22.353, 1e-4);
+        check("6 GHz 40 km midpath earth bulge", ScienceExtensions.earthBulge(40,1.33,.5), 23.603, 1e-3);
+        double[] fresnel = {40,6,25,50,60,60,1.33};
+        check("Traceable Fresnel clearance", ScienceExtensions.clearancePercent(fresnel), 50.99, 2e-3);
+        yes("Higher QAM order increases symbol errors at fixed Es/N0",
+            ScienceExtensions.symbolError(3,20) > ScienceExtensions.symbolError(1,20));
+        yes("Higher SNR decreases QAM symbol errors",
+            ScienceExtensions.symbolError(3,27) < ScienceExtensions.symbolError(3,22));
+        check("EVM at 20 dB", ScienceExtensions.evmPercent(20), 10);
+        check("550 km LEO propagation lower bound RTT", ScienceExtensions.satelliteRtt(550,0), 7.33841, 1e-4);
+        check("GEO propagation lower bound RTT", ScienceExtensions.satelliteRtt(35786,0), 477.326, 1e-3);
+        check("Galileo 1 km round trip", ScienceExtensions.galileoMicroseconds(1000), 6.6712819);
+        check("Rømer end of path", ScienceExtensions.roemerDelay(8), 998.0095676723);
+        check("Fizeau first extinction brightness", ScienceExtensions.fizeauBrightness(ScienceExtensions.fizeauExtinction(8633),8633), 0);
         System.out.println("All " + passed + " checks passed.");
     }
 }

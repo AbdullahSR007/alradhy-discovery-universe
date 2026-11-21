@@ -1,91 +1,93 @@
-name: Build ALRADHY Discovery Museum V0.6 APK
+name: Build ALRADHY Discovery Science Android TV
 
 on:
   push:
-    branches:
-      - feature/discovery-museum-v05
+    branches: [feature/science-museum-v1]
   workflow_dispatch:
+
+concurrency:
+  group: science-museum-release
+  cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/feature/science-museum-v1'
     runs-on: ubuntu-24.04
+    env:
+      APK: ALRADHY-Discovery-Science-Android-TV-v1.0.0.apk
+      BASELINE_CERT: 07ebe30363308176995207c325f66a3986e30f73b88e7400b65f40be95163c4c
+      BASELINE_PACKAGE: com.alradhy.discovery15labs.museumv05
+      BASELINE_VERSION: '14'
     steps:
-      - name: Checkout museum branch
-        uses: actions/checkout@v4
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install SDK and Gradle 8.7
-        shell: bash
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Install Android SDK
+        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+      - name: Validate exhibit content and models
         run: |
           set -euo pipefail
-          mkdir -p "$HOME/android-sdk/cmdline-tools"
-          curl -fLsS https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o cmdtools.zip
-          unzip -q cmdtools.zip -d "$HOME/android-sdk/cmdline-tools"
-          mv "$HOME/android-sdk/cmdline-tools/cmdline-tools" "$HOME/android-sdk/cmdline-tools/latest"
-          yes | "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
-          "$HOME/android-sdk/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-          echo "ANDROID_HOME=$HOME/android-sdk" >> "$GITHUB_ENV"
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> "$GITHUB_ENV"
-          curl -fLsS https://services.gradle.org/distributions/gradle-8.7-bin.zip -o gradle.zip
-          mkdir -p "$HOME/gradle"
-          unzip -q gradle.zip -d "$HOME/gradle"
-          echo "$HOME/gradle/gradle-8.7/bin" >> "$GITHUB_PATH"
-      - name: Verify physics equations and assumptions
-        run: python3 scripts/check_science_models.py
-      - name: Verify the app's own physics code (javac)
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/pc"
-          javac -encoding UTF-8 -d "$RUNNER_TEMP/pc" app/src/main/java/com/alradhy/discoverylab/PhysicsModels.java app/src/main/java/com/alradhy/discoverylab/LabCatalog.java scripts/PhysicsCheck.java
-          java -cp "$RUNNER_TEMP/pc" PhysicsCheck
-      - name: Prepare stable signing key (if secrets are configured)
-        shell: bash
+          python3 scripts/check_content.py
+          python3 scripts/check_science_models.py
+          mkdir -p "$RUNNER_TEMP/physics"
+          javac -encoding UTF-8 -d "$RUNNER_TEMP/physics" \
+            app/src/main/java/com/alradhy/discoverylab/{PhysicsModels,LabCatalog,ScienceExtensions}.java scripts/PhysicsCheck.java
+          java -cp "$RUNNER_TEMP/physics" PhysicsCheck
+      - name: Build with the installed application's signing key
         env:
-          KS_B64: ${{ secrets.ALRADHY_KEYSTORE_B64 }}
-          KS_PASS: ${{ secrets.ALRADHY_KEYSTORE_PASSWORD }}
-          KS_ALIAS: ${{ secrets.ALRADHY_KEY_ALIAS }}
-          KS_KEYPASS: ${{ secrets.ALRADHY_KEY_PASSWORD }}
+          KEYSTORE_B64: ${{ secrets.ALRADHY_KEYSTORE_B64 }}
+          ALRADHY_KEYSTORE_PASSWORD: ${{ secrets.ALRADHY_KEYSTORE_PASSWORD }}
+          ALRADHY_KEY_ALIAS: ${{ secrets.ALRADHY_KEY_ALIAS }}
+          ALRADHY_KEY_PASSWORD: ${{ secrets.ALRADHY_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          if [ -n "$KS_B64" ]; then
-            echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/alradhy.jks"
-            echo "ALRADHY_KEYSTORE_FILE=$RUNNER_TEMP/alradhy.jks" >> "$GITHUB_ENV"
-            echo "ALRADHY_KEYSTORE_PASSWORD=$KS_PASS" >> "$GITHUB_ENV"
-            echo "ALRADHY_KEY_ALIAS=$KS_ALIAS" >> "$GITHUB_ENV"
-            echo "ALRADHY_KEY_PASSWORD=$KS_KEYPASS" >> "$GITHUB_ENV"
-            echo "Stable signing key found: this APK can update in place."
-          else
-            echo "::warning::No signing secrets: APK gets a random debug key and CANNOT update an installed copy."
-          fi
-      - name: Build interactive museum APK
-        run: gradle :app:assembleDebug --stacktrace --no-daemon
-      - name: Verify and checksum APK
-        shell: bash
+          : "${KEYSTORE_B64:?Missing signing keystore}" "${ALRADHY_KEYSTORE_PASSWORD:?Missing keystore password}" \
+            "${ALRADHY_KEY_ALIAS:?Missing key alias}" "${ALRADHY_KEY_PASSWORD:?Missing key password}"
+          export ALRADHY_KEYSTORE_FILE="$RUNNER_TEMP/museum-signing.jks"
+          trap 'rm -f "$ALRADHY_KEYSTORE_FILE"' EXIT
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$ALRADHY_KEYSTORE_FILE"
+          gradle :app:assembleRelease --no-daemon --stacktrace
+      - name: Verify the final APK against the installed baseline
         run: |
           set -euo pipefail
-          cp app/build/outputs/apk/debug/app-debug.apk ALRADHY-Discovery-Museum-V06.apk
-          test -s ALRADHY-Discovery-Museum-V06.apk
-          sha256sum ALRADHY-Discovery-Museum-V06.apk
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --print-certs ALRADHY-Discovery-Museum-V06.apk | grep -E "certificate (DN|SHA-256)"
-      - name: Upload Fusion artifact
+          build_tools="$ANDROID_HOME/build-tools/34.0.0"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          badging=$("$build_tools/aapt2" dump badging "$APK")
+          package=$(sed -n "s/^package: name='\([^']*\)'.*/\1/p" <<< "$badging")
+          code=$(sed -n "s/^package:.*versionCode='\([0-9]*\)'.*/\1/p" <<< "$badging")
+          version=$(sed -n "s/^package:.*versionName='\([^']*\)'.*/\1/p" <<< "$badging")
+          certs=$("$build_tools/apksigner" verify --print-certs "$APK")
+          certificate=$(sed -n 's/^Signer #[0-9]* certificate SHA-256 digest: //p' <<< "$certs")
+          [[ "$package" == "$BASELINE_PACKAGE" ]]
+          [[ "$code" =~ ^[0-9]+$ && "$code" -gt "$BASELINE_VERSION" ]]
+          [[ "$version" == '1.0.0-science' ]]
+          [[ "$certificate" == "$BASELINE_CERT" ]]
+          ! grep -q '^application-debuggable' <<< "$badging"
+          sha256sum "$APK" | tee museum-sha256.txt
+          printf 'Package %s\nVersion %s (%s)\nSigning certificate SHA-256 %s\n' "$package" "$version" "$code" "$certificate"
+      - name: Upload verified Android TV APK
         uses: actions/upload-artifact@v4
         with:
-          name: ALRADHY-Discovery-Museum-V06-APK
-          path: ALRADHY-Discovery-Museum-V06.apk
-      - name: Publish Fusion preview prerelease
-        shell: bash
+          name: ALRADHY-Discovery-Science-Android-TV-v1.0.0
+          path: |
+            ${{ env.APK }}
+            museum-sha256.txt
+          if-no-files-found: error
+      - name: Publish the Android TV prerelease
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "discovery-museum-v0.6.${{ github.run_number }}" ALRADHY-Discovery-Museum-V06.apk \
+          gh release create "science-museum-v1.0.0-b$GITHUB_RUN_NUMBER" "$APK" museum-sha256.txt \
             --target "$GITHUB_SHA" \
-            --title "ALRADHY Discovery Museum V0.6 - 15 Interactive Science Labs" \
-            --notes "Museum V0.6: two-pane lab screen, recorded predictions with automatic challenge completion, smoother remote focus, faster saving and drawing, 15-lab hub with progress meter, stable station-to-lab links. Same application ID as V0.5; installs as an update only when the stable signing key secrets are configured. Device QA pending." \
+            --title "ALRADHY Discovery Science 1.0.0 for Android TV" \
+            --notes "Seven science wings, 56 interactive experiments, and a telecom workbench for link budget, Fresnel clearance, QAM and satellite latency. Signed APK verified against the Android TV versionCode 14 baseline. Physical-device QA pending." \
             --prerelease
