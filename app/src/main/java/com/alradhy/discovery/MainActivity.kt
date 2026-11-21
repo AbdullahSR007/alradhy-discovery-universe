@@ -3,6 +3,7 @@ package com.alradhy.discovery
 import android.app.Activity
 import android.app.Dialog
 import android.content.Context
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
@@ -254,7 +255,14 @@ class MainActivity : Activity() {
         if (page.name in listOf("wing", "search", "progress", "settings")) {
             body.addView(rail(), LinearLayout.LayoutParams(ui.dp(67), -1).apply { marginEnd = ui.dp(14) })
         }
-        val stage = FrameLayout(this).apply {
+        val stage = object : FrameLayout(this) {
+            override fun dispatchDraw(canvas: Canvas) {
+                val save = canvas.save()
+                if (page.name == "home") canvas.clipRect(0, 0, width, height)
+                super.dispatchDraw(canvas)
+                canvas.restoreToCount(save)
+            }
+        }.apply {
             layoutDirection = View.LAYOUT_DIRECTION_RTL
             clipChildren = false
             clipToPadding = false
@@ -786,7 +794,7 @@ class MainActivity : Activity() {
         setting("tts.speed", "سرعة القراءة", listOf("بطيئة", "عادية", "سريعة")[speed]) { store.set("tts.speed", (speed + 1) % 3) }
         toggle("sound", "صوت الإجابة")
         ui.add(box, action("settings.preview", "ابدأ عرض المقاييس الآن", teal, 19) { open("ambient") }, 6)
-        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.0.1\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
+        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.0.2\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
         preferred = "settings.text"
         return ui.scroll(box)
     }
