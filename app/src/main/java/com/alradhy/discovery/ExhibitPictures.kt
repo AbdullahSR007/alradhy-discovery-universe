@@ -7,6 +7,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.widget.ImageView
 import kotlin.math.log10
 
@@ -15,6 +16,9 @@ internal class ExhibitPictures {
 
     fun view(context: Context, key: String) = ImageView(context).apply {
         scaleType = ImageView.ScaleType.CENTER_CROP
+        outlineProvider = ViewOutlineProvider.BOUNDS
+        clipToOutline = true
+        cropToPadding = true
         show(this, key)
     }
 

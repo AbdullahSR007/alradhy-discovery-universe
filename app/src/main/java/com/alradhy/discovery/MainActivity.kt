@@ -934,7 +934,7 @@ class MainActivity : Activity() {
         setting("tts.speed", "سرعة القراءة", listOf("بطيئة", "عادية", "سريعة")[speed]) { store.set("tts.speed", (speed + 1) % 3) }
         toggle("sound", "صوت الإجابة")
         ui.add(box, action("settings.preview", "ابدأ عرض المقاييس الآن", teal, 19) { open("ambient") }, 6)
-        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.2.0\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
+        ui.add(box, ui.text("ALRADHY Discovery Science  ·  1.2.1\nيعمل المتحف دون اتصال بالإنترنت.", 17, muted), 12)
         preferred = "settings.text"
         return ui.scroll(box)
     }

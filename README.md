@@ -14,7 +14,7 @@ The biology wing now includes 20 labs and a 17-stop journey from LUCA to modern 
 
 Use JDK 17, Gradle 8.9, Android SDK 34 and build-tools 34.0.0. Run `gradle :app:assembleDebug` for internal emulator testing. The feature-branch workflow builds the signed release, validates content and equations, and checks the final APK's package, version code and certificate against the installed 1.1.0 baseline before publishing.
 
-The application ID is `com.alradhy.discovery15labs.museumv05` and this release uses versionCode 19. On its first launch the app copies legacy experimental settings and observations to stable IDs. It keeps the three existing SharedPreferences files available in their original form.
+The application ID is `com.alradhy.discovery15labs.museumv05` and this release uses versionCode 20. On its first launch the app copies legacy experimental settings and observations to stable IDs. It keeps the three existing SharedPreferences files available in their original form.
 
 Every graph uses the live measurement model. The X-axis control switches the swept input while each series keeps its own other inputs fixed. Discrete controls plot points. A missing physical reading leaves a gap, such as a focused thin lens or total internal reflection. The CI sweep test runs every axis under default, minimum and maximum configurations.
 
