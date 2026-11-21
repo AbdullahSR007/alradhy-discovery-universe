@@ -31,7 +31,18 @@ jobs:
         with:
           gradle-version: '8.9'
       - name: Install Android SDK
-        run: sdkmanager 'platforms;android-34' 'build-tools;34.0.0'
+        run: |
+          set -euo pipefail
+          sdk="$RUNNER_TEMP/android-sdk"
+          mkdir -p "$sdk/cmdline-tools"
+          curl --fail --location --silent --show-error --retry 3 \
+            https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+            -o "$RUNNER_TEMP/android-command-line.zip"
+          unzip -q "$RUNNER_TEMP/android-command-line.zip" -d "$sdk/cmdline-tools"
+          manager="$sdk/cmdline-tools/cmdline-tools/bin/sdkmanager"
+          yes | "$manager" --sdk_root="$sdk" --licenses >/dev/null || true
+          "$manager" --sdk_root="$sdk" 'platform-tools' 'platforms;android-34' 'build-tools;34.0.0'
+          printf 'ANDROID_HOME=%s\nANDROID_SDK_ROOT=%s\n' "$sdk" "$sdk" >> "$GITHUB_ENV"
       - name: Validate exhibit content and models
         run: |
           set -euo pipefail
