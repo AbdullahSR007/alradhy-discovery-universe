@@ -74,3 +74,18 @@ internal fun labReadout(topic: Topic, p: DoubleArray): String {
         else -> "${topic.metric}\n${ltr(fmt(value, 3))}"
     }
 }
+
+internal val detailedReadouts = setOf("telecom.link-budget", "telecom.fresnel", "telecom.qam", "telecom.orbit-latency", "light.galileo", "light.fizeau")
+
+internal fun headlineUnit(topic: Topic): String = when (topic.id) {
+    "mechanics.newton2", "mechanics.friction", "astro.gravity" -> " m/s²"
+    "telecom.link-budget" -> " dB"
+    "telecom.fresnel", "light.fizeau" -> "%"
+    "telecom.qam" -> " Mb/s"
+    "telecom.orbit-latency" -> " ms"
+    "light.galileo" -> " µs"
+    "light.roemer", "mechanics.pendulum", "mechanics.spring" -> " s"
+    "fields.rc" -> " V"
+    "fields.wire" -> " µT"
+    else -> ""
+}

@@ -233,22 +233,10 @@ class MainActivity : Activity() {
             val base = if (store.flag("contrast")) Color.BLACK else 0xff0b1020.toInt()
             background = GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM, intArrayOf(0xff05070f.toInt(), base))
             val compact = resources.configuration.screenWidthDp < 825
-            val x = if (compact) 22 else 48
-            val y = if (compact) 13 else 25
+            val x = if (compact) 20 else 34
+            val y = if (compact) 12 else 18
             setPadding(ui.dp(x), ui.dp(y), ui.dp(x), ui.dp(y))
         }
-        if (!isAmbient) ui.add(root, header(page), height = 46)
-        val body = ui.row().apply { gravity = Gravity.TOP }
-        root.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(if (isAmbient) 0 else 9) })
-        if (page.name in listOf("home", "wing", "search", "progress", "settings")) {
-            body.addView(rail(), LinearLayout.LayoutParams(ui.dp(67), -1).apply { marginEnd = ui.dp(14) })
-        }
-        val stage = FrameLayout(this).apply {
-            layoutDirection = View.LAYOUT_DIRECTION_RTL
-            clipChildren = false
-            clipToPadding = false
-        }
-        body.addView(stage, LinearLayout.LayoutParams(0, -1, 1f))
         val screen = when (page.name) {
             "home" -> home()
             "wing" -> wing(content.wing(page.id), page)
@@ -260,9 +248,21 @@ class MainActivity : Activity() {
             "settings" -> settings()
             else -> home()
         }
+        if (!isAmbient) ui.add(root, header(page), height = 37)
+        val body = ui.row().apply { gravity = Gravity.TOP }
+        root.addView(body, LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(if (isAmbient) 0 else 11) })
+        if (page.name in listOf("wing", "search", "progress", "settings")) {
+            body.addView(rail(), LinearLayout.LayoutParams(ui.dp(67), -1).apply { marginEnd = ui.dp(14) })
+        }
+        val stage = FrameLayout(this).apply {
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            clipChildren = false
+            clipToPadding = false
+        }
+        body.addView(stage, LinearLayout.LayoutParams(0, -1, 1f))
         stage.addView(screen, FrameLayout.LayoutParams(-1, -1))
-        footer = ui.text("", 13, muted)
-        ui.add(root, footer, 7, 22)
+        footer = ui.text("", 12, muted).apply { gravity = Gravity.CENTER }
+        ui.add(root, footer, 8, 18)
         setHint()
         setContentView(root)
         root.post {
@@ -283,13 +283,40 @@ class MainActivity : Activity() {
             else -> "متحف العلوم"
         }
         return ui.row().apply {
-            addView(ui.text(heading, 31, ui.foreground, true), LinearLayout.LayoutParams(0, -1, 1f))
-            val brand = ui.number("ALRADHY DISCOVERY", 15, teal)
-            addView(brand, LinearLayout.LayoutParams(-2, -1).apply { marginEnd = ui.dp(14) })
-            if (page.name != "home") addView(action("header.back", "رجوع", teal, 15) { onBackPressed() },
-                LinearLayout.LayoutParams(ui.dp(68), ui.dp(37)))
+            if (page.name == "home") {
+                val emblem = WingGlyph(this@MainActivity, "observatory", 0xff38bdf8.toInt())
+                addView(emblem, LinearLayout.LayoutParams(ui.dp(29), ui.dp(29)).apply { marginEnd = ui.dp(9) })
+                addView(ui.text("ALRADHY Discovery  •  متحف العلوم", 21, ui.foreground, true),
+                    LinearLayout.LayoutParams(0, -1, 1f))
+                val tools = ui.row()
+                val stars = content.topics.count(store::starred)
+                val buttons = listOf(
+                    topTool("top.search", "بحث", "scale", teal) { open("search") },
+                    action("top.progress", "★  $stars", 0xfffacc15.toInt(), 16) { open("progress") },
+                    topTool("top.settings", "الإعدادات", "settings", muted) { open("settings") }
+                )
+                buttons.forEach { button -> tools.addView(button, LinearLayout.LayoutParams(ui.dp(55), -1).apply { marginStart = ui.dp(6) }) }
+                addView(tools, LinearLayout.LayoutParams(-2, -1))
+            } else {
+                addView(action("header.back", "→", teal, 21) { onBackPressed() },
+                    LinearLayout.LayoutParams(ui.dp(44), ui.dp(35)).apply { marginEnd = ui.dp(9) })
+                val labTitle = if (page.name == "lab") content.byId.getValue(page.id).title else null
+                val title = if (labTitle == null) heading else "$heading  /  $labTitle"
+                addView(ui.text(title, if (labTitle == null) 25 else 21, ui.foreground, true).apply { maxLines = 2 },
+                    LinearLayout.LayoutParams(0, -1, 1f))
+                workbench?.let {
+                    addView(it.navigation, LinearLayout.LayoutParams(ui.dp(258), -1).apply { marginStart = ui.dp(10) })
+                }
+            }
         }
     }
+
+    private fun topTool(key: String, description: String, glyph: String, color: Int, activate: () -> Unit): View =
+        WingGlyph(this, glyph, color).also {
+            it.contentDescription = description
+            ui.interactive(it, color, activate)
+            bind(key, it)
+        }
 
     private fun rail(): View {
         val column = ui.column()
@@ -319,51 +346,68 @@ class MainActivity : Activity() {
     private fun home(): View {
         val column = ui.column()
         val item = content.byId.getValue(featured[featuredIndex])
+        val color = content.wing(item.wing).color
         val hero = ui.row().apply {
             background = GalaxyBackground()
-            ui.pad(this, 14, 8)
+            ui.pad(this, 17, 8)
         }
         val main = ui.column()
-        ui.add(main, ui.number("SCIENCE  /  OBSERVATORY", 12, teal))
-        ui.add(main, ui.text("مرصد الاكتشاف", 34, ui.foreground, true), 4)
-        ui.add(main, ui.text(item.title, 19, muted), 2)
+        val displayName = if (item.id == "telecom.link-budget") "ميزانية الوصلة الراديوية" else item.title
+        val headline = if (item.id == "telecom.link-budget")
+            "هل تصل إشارة 80 GHz لمسافة 2 km في المطر؟ احسب هامش الأمان بنفسك." else item.summary
+        ui.add(main, ui.text("تجربة اليوم  •  علوم الاتصالات", 15, color, true))
+        ui.add(main, ui.text(displayName, 32, ui.foreground, true), 5)
+        ui.add(main, ui.text(headline, 17, muted).apply { maxLines = 2 }, 5)
         val actions = ui.row()
-        val launch = action("hero", "ابدأ التجربة", teal, 17) { open("lab", item.id) }
-        ui.cells(actions, listOf(launch, action("rotate", "تجربة ثانية", teal, 15) {
+        val launch = action("hero", "▷  ابدأ التجربة", color, 16) { open("lab", item.id) }.apply {
+            minimumHeight = ui.dp(36)
+            setTextColor(0xff061819.toInt())
+            background = android.graphics.drawable.StateListDrawable().apply {
+                addState(intArrayOf(android.R.attr.state_focused), ui.shape(0xff80fff2.toInt(), Color.WHITE, 11, 2))
+                addState(intArrayOf(), ui.shape(color, color, 11))
+            }
+        }
+        val rotate = action("rotate", "تجربة ثانية", color, 14) {
             featuredIndex = (featuredIndex + 1) % featured.size
             pages.last().focus = "rotate"
             render()
-        }))
+        }.apply { minimumHeight = ui.dp(36) }
+        actions.addView(launch, LinearLayout.LayoutParams(-2, -2))
+        actions.addView(rotate, LinearLayout.LayoutParams(-2, -2).apply { marginStart = ui.dp(7) })
+        launch.nextFocusLeftId = rotate.id
+        rotate.nextFocusRightId = launch.id
         ui.add(main, actions, 8)
-        hero.addView(main, LinearLayout.LayoutParams(0, -2, 1f))
-        hero.addView(ExperimentView(this, item, teal).apply {
+        hero.addView(main, LinearLayout.LayoutParams(0, -2, 1.0f))
+        hero.addView(ExperimentView(this, item, color).apply {
+            presentation = true
             running = ui.motion
             contentDescription = item.english
-        }, LinearLayout.LayoutParams(0, -1, 1.15f).apply { marginStart = ui.dp(13) })
-        ui.add(column, hero, height = 139)
-        preferred = "hero"
+        }, LinearLayout.LayoutParams(0, -1, 1.05f).apply { marginStart = ui.dp(15) })
+        ui.add(column, hero, height = 159)
+        preferred = "wing.telecom"
 
-        val order = listOf("telecom", "scale", "mechanics", "fields", "light", "astro", "matter")
+        val order = listOf("scale", "mechanics", "fields", "light", "astro", "telecom", "matter")
         order.chunked(4).forEach { ids ->
             val strip = ui.row()
             val cards = ids.map { wingCard(content.wing(it)) }
-            ui.cells(strip, cards + if (cards.size < 4) listOf(View(this)) else emptyList(), height = 74)
-            ui.add(column, strip, 9)
+            val views = if (cards.size == 4) cards else cards + progressCard()
+            ui.cells(strip, views, gap = 12, height = 110)
+            ui.add(column, strip, 12)
         }
         val today = dailyTopic()
-        val bottom = ui.row()
+        val daily = ui.row()
         val recent = store.recent().firstOrNull()
-        ui.cells(bottom, listOf(
-            action("daily", "تحدّي اليوم  ·  ${today.title}", 0xfffacc15.toInt(), 15) { quiz(today, true) },
-            action("continue", recent?.let { "تابع  ·  ${it.title}" } ?: "ابدأ رحلة المقاييس", teal, 15) {
+        ui.cells(daily, listOf(
+            action("daily", "تحدّي اليوم  ·  ${today.title}", 0xfffacc15.toInt(), 16) { quiz(today, true) },
+            action("continue", recent?.let { "تابع  ·  ${it.title}" } ?: "ابدأ رحلة المقاييس", teal, 16) {
                 if (recent == null) open("scale") else open("lab", recent.id)
             }
         ))
-        ui.add(column, bottom, 9)
+        ui.add(column, daily, 11)
         val rest = store.recent().drop(1)
         if (rest.isNotEmpty()) {
             val r = ui.row()
-            ui.cells(r, rest.map { item -> action("recent.${item.id}", item.title, teal, 15) { open("lab", item.id) } })
+            ui.cells(r, rest.map { prior -> action("recent.${prior.id}", prior.title, teal, 15) { open("lab", prior.id) } })
             ui.add(column, r, 9)
         }
         return ui.scroll(column)
@@ -375,15 +419,38 @@ class MainActivity : Activity() {
     }
 
     private fun wingCard(wing: Wing): View {
-        val count = if (wing.id == "scale") wing.topics.count(store::seen) else wing.topics.count { store.done(it) || store.starred(it) }
-        val card = ui.column().apply {
-            ui.pad(this, 10, 6)
-            gravity = Gravity.CENTER_VERTICAL
-            ui.add(this, ui.text(wing.title, 17, wing.color, true))
-            ui.add(this, ui.number("${count}/${wing.topics.size}", 12, muted).apply { gravity = Gravity.RIGHT }, 4)
+        val experiments = wing.topics.filter(Topic::isLab)
+        val seen = wing.topics.count(store::seen)
+        val complete = experiments.count(store::done)
+        val caption = when {
+            wing.id == "scale" -> "من طول بلانك إلى حافة الكون"
+            experiments.isEmpty() -> "${wing.topics.size} موضوعًا"
+            else -> "${experiments.size} مختبرًا" + if (complete > 0) "  •  $complete مكتمل" else ""
         }
-        ui.interactive(card, wing.color) { openWing(wing) }
-        return bind("wing.${wing.id}", card)
+        val progress = if (experiments.isEmpty()) seen.toFloat() / wing.topics.size else complete.toFloat() / experiments.size
+        return showcaseCard("wing.${wing.id}", wing.id, wing.title, caption, wing.color, progress) { openWing(wing) }
+    }
+
+    private fun progressCard(): View {
+        val stars = content.topics.count(store::starred)
+        val labs = content.labs.count(store::done)
+        return showcaseCard("progress.card", "progress", "تقدّمي", "$stars نجمة  •  $labs تجربة",
+            0xfff472b6.toInt(), labs.toFloat() / content.labs.size) { open("progress") }
+    }
+
+    private fun showcaseCard(key: String, glyph: String, title: String, caption: String, color: Int,
+        fraction: Float, open: () -> Unit): View {
+        val card = ui.column().apply {
+            ui.pad(this, 13, 8)
+            val icon = WingGlyph(this@MainActivity, glyph, color)
+            addView(icon, LinearLayout.LayoutParams(ui.dp(29), ui.dp(29)))
+            ui.add(this, ui.text(title, 18, ui.foreground, true), 3)
+            ui.add(this, ui.text(caption, 13, muted), 3)
+            addView(View(this@MainActivity), LinearLayout.LayoutParams(-1, 0, 1f))
+            ui.add(this, ProgressTrack(this@MainActivity, color, fraction), 5, 4)
+        }
+        ui.interactive(card, color, open)
+        return bind(key, card)
     }
 
     private fun wing(wing: Wing, page: Screen): View {

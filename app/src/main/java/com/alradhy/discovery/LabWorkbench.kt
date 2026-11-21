@@ -34,12 +34,14 @@ internal class LabWorkbench(
     private val curve = CurveView(activity, topic, accent)
     private val info = ui.column()
     private val side = ui.column()
-    private val output = ui.text("", 18, ui.foreground, true)
+    private val metric = ui.text(topic.metric, 14, muted).apply { gravity = Gravity.CENTER }
+    private val number = ui.number("", 26, 0xff4ade80.toInt()).apply { gravity = Gravity.CENTER }
+    private val output = ui.text("", 14, ui.foreground, true).apply { gravity = Gravity.CENTER }
     private val comparison = ui.text("", 16, accent, true)
     private val fineHint = ui.text("", 14, muted)
     private val sliderRefs = mutableListOf<TvSlider>()
     private val labels = mutableListOf<TextView>()
-    private val stepper = ui.row()
+    val navigation = ui.row()
     private val chart = ui.column()
     private val play: TextView
     private val slow: TextView
@@ -52,39 +54,50 @@ internal class LabWorkbench(
     init {
         ui.pad(side, 10, 9)
         side.background = ui.shape(ui.surface)
-        val title = ui.text(topic.title, 25, ui.foreground, true)
-        ui.add(side, title)
-        ui.add(side, ui.number(topic.equation, 14, accent), 5)
-        ui.add(side, stepper, 8)
+        val equation = if (topic.id == "mechanics.newton2") "F = m · a" else topic.equation
+        ui.add(side, ui.number(equation, if (equation.length <= 20) 29 else 16, accent).apply { gravity = Gravity.CENTER }, 6)
+        val readout = ui.column().apply {
+            background = ui.shape(0xff0d1425.toInt(), 0xff1b2943.toInt(), 12)
+            ui.pad(this, 10, 7)
+        }
+        ui.add(readout, metric)
+        ui.add(readout, number, 3)
+        ui.add(readout, output, 3)
+        ui.add(readout, comparison, 4)
+        comparison.gravity = Gravity.CENTER
         side.addView(ui.scroll(info), LinearLayout.LayoutParams(-1, 0, 1f).apply { topMargin = ui.dp(8) })
-        ui.add(side, output, 7)
-        ui.add(side, comparison, 5)
-        ui.add(side, fineHint, 4)
+        ui.add(side, readout, 9)
+        ui.add(side, fineHint, 3)
 
         val theatre = ui.column()
+        val simulation = ui.column().apply {
+            background = ui.shape(0xff0b1425.toInt(), ui.border, 16)
+            ui.pad(this, 6, 6)
+        }
         hero.running = running
         hero.values = values
         hero.baseline = baseline
         hero.contentDescription = "محاكاة " + topic.title
         hero.drag = ::dragPlot
         hero.importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
-        theatre.addView(hero, LinearLayout.LayoutParams(-1, 0, 1f))
+        simulation.addView(hero, LinearLayout.LayoutParams(-1, 0, 1f))
         val tools = ui.row()
         play = command("play", "إيقاف", 15) { togglePlay() }
         slow = command("slow", "1×", 15) { changeSpeed() }
         juxtapose = command("compare", "ماذا لو؟", 15) { toggleCompare() }
         plot = command("chart", "المنحنى", 15) { toggleGraph() }
         ui.cells(tools, listOf(play, slow, juxtapose, plot, command("menu", "أدوات", 15) { quickMenu() }))
-        ui.add(theatre, tools, 7)
+        ui.add(simulation, tools, 4)
+        theatre.addView(simulation, LinearLayout.LayoutParams(-1, 0, 1f))
         chart.background = ui.shape(ui.surface)
         ui.pad(chart, 10, 5)
         val chartTitle = ui.text(topic.metric + "  /  " + topic.controls[graphAxis(topic)].label, 14, muted)
         ui.add(chart, chartTitle)
-        ui.add(chart, curve, 3, 56)
+        ui.add(chart, curve, 4, 103)
         ui.add(theatre, chart, 7)
 
-        view.addView(side, LinearLayout.LayoutParams(0, -1, 1f))
-        view.addView(theatre, LinearLayout.LayoutParams(0, -1, 1.62f).apply { marginStart = ui.dp(12) })
+        view.addView(theatre, LinearLayout.LayoutParams(0, -1, 1.88f))
+        view.addView(side, LinearLayout.LayoutParams(0, -1, 1f).apply { marginStart = ui.dp(12) })
         refreshStep()
         refresh()
     }
@@ -93,10 +106,10 @@ internal class LabWorkbench(
         ui.button(label, accent, size, action).also { it.tag = key; bind(key, it) }
 
     private fun refreshStep(focus: String? = null) {
-        stepper.removeAllViews()
-        val tags = listOf("توقّع", "جرّب", "قارن", "افهم")
+        navigation.removeAllViews()
+        val tags = listOf("① توقّع", "② جرّب", "③ قارن", "④ افهم")
         val buttons = tags.mapIndexed { index, label ->
-            command("step.$index", (if (stage == index) "● " else "") + label, 13) {
+            command("step.$index", label, 13) {
                 if (index != 0 && locked()) {
                     fineHint.text = "اختر توقّعًا أولًا لفتح المنزلقات."
                     showStage(0, "prediction.0")
@@ -106,9 +119,16 @@ internal class LabWorkbench(
             }.apply {
                 minimumHeight = 0
                 ui.pad(this, 3, 1)
+                if (stage == index) {
+                    setTextColor(0xff07111c.toInt())
+                    background = android.graphics.drawable.StateListDrawable().apply {
+                        addState(intArrayOf(android.R.attr.state_focused), ui.shape(accent, ui.foreground, 9, 3))
+                        addState(intArrayOf(), ui.shape(accent, accent, 9))
+                    }
+                }
             }
         }
-        ui.cells(stepper, buttons, 5, 32)
+        ui.cells(navigation, buttons, 5, 33)
         info.removeAllViews()
         sliderRefs.clear()
         labels.clear()
@@ -313,7 +333,13 @@ internal class LabWorkbench(
         plot.text = if (showGraph) "✓ المنحنى" else "المنحنى"
         chart.visibility = if (showGraph) View.VISIBLE else View.GONE
         if (showGraph) curve.update(values, baseline)
-        output.text = labReadout(topic, values)
+        val current = reading(topic, values)
+        number.setTextColor(if (topic.id == "telecom.link-budget" && current < 0) 0xfffb7185.toInt() else 0xff4ade80.toInt())
+        number.text = ltr(fmt(current, if (topic.id == "mechanics.newton2") 1 else 2) + headlineUnit(topic))
+        val detail = labReadout(topic, values)
+        val rich = topic.id in detailedReadouts || (topic.legacy ?: -1) >= 12 && topic.id != "mechanics.newton2"
+        output.text = if (rich) detail else ""
+        output.visibility = if (rich) View.VISIBLE else View.GONE
         val reference = baseline
         comparison.text = if (reference != null && !reference.contentEquals(values)) {
             val value = reading(topic, values)

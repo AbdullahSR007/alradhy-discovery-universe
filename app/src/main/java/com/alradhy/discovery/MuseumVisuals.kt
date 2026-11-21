@@ -17,6 +17,7 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
     var values = topic.defaults()
     var baseline: DoubleArray? = null
     var compare = false
+    var presentation = false
     var running = true
     var speed = 1.0
     var drag: ((Float, Float, Boolean) -> Unit)? = null
@@ -65,7 +66,7 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         if (running && lastFrame > 0) elapsed += (now - lastFrame).coerceIn(0, 40) / 1000.0 * speed
         lastFrame = now
         ink.style = Paint.Style.FILL
-        ink.color = 0xff0b1425.toInt()
+        ink.color = if (presentation) Color.TRANSPARENT else 0xff0b1425.toInt()
         canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ink)
         val saved = baseline
         val split = compare && saved != null
@@ -77,7 +78,8 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         }
         if (running) {
             when (topic.id) {
-                "telecom.link-budget", "telecom.fresnel", "fields.rc", "fields.wire" -> Unit
+                "telecom.link-budget" -> if (presentation) postInvalidateOnAnimation() else Unit
+                "telecom.fresnel", "fields.rc", "fields.wire" -> Unit
                 else -> postInvalidateOnAnimation()
             }
         }
@@ -88,7 +90,9 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         c.clipRect(left, 0f, left + width, height.toFloat())
         c.translate(left, 0f)
         c.scale(width / 1000f, height / 440f)
-        if (topic.legacy != null) {
+        if (topic.id == "mechanics.newton2") {
+            newton(c, p)
+        } else if (topic.legacy != null) {
             val a = topic.controls[0]
             val b = topic.controls[1]
             legacy.draw(c, topic.legacy, p[0], p[1], p.getOrElse(2) { 2.0 },
@@ -99,7 +103,7 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
                 dot(c, stars[i] * 980 + 10, y, if (i % 6 == 0) 2.3f else 1.3f, 0xff30425e.toInt())
             }
             when (topic.id) {
-                "telecom.link-budget" -> waterfall(c, p)
+                "telecom.link-budget" -> if (presentation) radioPath(c, p) else waterfall(c, p)
                 "telecom.fresnel" -> fresnel(c, p)
                 "telecom.qam" -> qam(c, p)
                 "telecom.orbit-latency" -> latency(c, p)
@@ -117,6 +121,87 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
             text(c, tag, 34f, 36f, 20f, 0xffe8eef9.toInt())
         }
         c.restore()
+    }
+
+    private fun newton(c: Canvas, p: DoubleArray) {
+        val acceleration = reading(topic, p)
+        val metresToPixels = 12.0
+        val runDuration = sqrt(2 * 560 / (acceleration * metresToPixels)).coerceAtMost(5.0)
+        val t = elapsed % runDuration
+        val d = .5 * acceleration * t * t
+        val cart = (242 + d * metresToPixels).toFloat()
+        val track = 364f
+        for (tick in 1..12) line(c, 77f * tick, 28f, 77f * tick, track, 0xff263550.toInt(), 1.3f)
+        line(c, 20f, track, 980f, track, 0xff62738e.toInt(), 3f)
+        for (i in 1..3) {
+            val prior = (t - .17 * i).coerceAtLeast(0.0)
+            val x = (242 + .5 * acceleration * prior * prior * metresToPixels).toFloat()
+            if (cart - x < 10) continue
+            ink.style = Paint.Style.FILL
+            ink.color = Color.argb(38 - i * 7, 56, 189, 248)
+            c.drawRect(x, track - 74, x + 96, track, ink)
+        }
+        ink.color = 0xff213c82.toInt()
+        ink.style = Paint.Style.FILL
+        c.drawRect(cart, track - 74, cart + 96, track, ink)
+        ink.color = 0xff60a5fa.toInt()
+        ink.style = Paint.Style.STROKE
+        ink.strokeWidth = 4f
+        c.drawRect(cart, track - 74, cart + 96, track, ink)
+        text(c, fmt(p[1], 1) + " kg", cart + 9, track - 26, 19f, 0xffe8eef9.toInt())
+        val forceEnd = (cart + 130 + p[0] * .7).coerceAtMost(977.0).toFloat()
+        val accelerationEnd = (cart + 135 + min(acceleration * 5, 70.0)).coerceAtMost(977.0).toFloat()
+        arrow(c, cart + 97, track - 33, forceEnd, accent)
+        arrow(c, cart + 15, track - 109, accelerationEnd, 0xff4ade80.toInt())
+        text(c, "F = " + fmt(p[0], 1) + " N", cart + 100, track - 54, 23f, accent)
+        text(c, "a = " + fmt(acceleration, 1) + " m/s²", cart + 8, track - 127, 24f, 0xff4ade80.toInt())
+        text(c, "t = " + fmt(t, 1) + " s    v = " + fmt(acceleration * t, 1) + " m/s    x = " + fmt(d, 1) + " m",
+            33f, 58f, 25f, 0xffa6b7d2.toInt())
+    }
+
+    private fun arrow(c: Canvas, start: Float, y: Float, end: Float, color: Int) {
+        line(c, start, y, end, y, color, 5f)
+        path.reset()
+        path.moveTo(end, y)
+        path.lineTo(end - 15, y - 9)
+        path.lineTo(end - 15, y + 9)
+        path.close()
+        ink.style = Paint.Style.FILL
+        ink.color = color
+        c.drawPath(path, ink)
+    }
+
+    private fun radioPath(c: Canvas, p: DoubleArray) {
+        val tx = 143f
+        val rx = 856f
+        val y = 230f
+        for (x in floatArrayOf(tx, rx)) {
+            line(c, x, y, x - 30, 403f, accent, 4f)
+            line(c, x, y, x + 30, 403f, accent, 4f)
+            line(c, x, y, x, 403f, accent, 4f)
+            dot(c, x, y, 15f, accent)
+        }
+        for (arc in 0..3) {
+            path.reset()
+            path.moveTo(tx, y)
+            path.quadTo(499f, 159f - 55f * arc, rx, y)
+            ink.style = Paint.Style.STROKE
+            ink.color = Color.argb(127 - 23 * arc, 45, 212, 191)
+            ink.strokeWidth = 4f
+            c.drawPath(path, ink)
+        }
+        val phase = ((elapsed * .19) % 1).toFloat()
+        val position = tx + (rx - tx) * phase
+        val height = y - 142 * phase * (1 - phase)
+        dot(c, position, height, 8f, 0xffe0fffa.toInt())
+        for (i in 0 until 28) {
+            val x = 220 + stars[i * 2] * 565
+            val rainY = 30 + (stars[i * 2 + 1] * 165 + elapsed * 70).rem(165.0).toFloat()
+            line(c, x + 9, rainY, x, rainY + 27, 0x9942b9e8.toInt(), 3f)
+        }
+        val margin = Science.linkStages(p).last() - p[8]
+        text(c, "margin " + if (margin >= 0) "+" + fmt(margin, 1) + " dB" else fmt(margin, 1) + " dB",
+            340f, 355f, 33f, if (margin >= 0) 0xff4ade80.toInt() else 0xfffb7185.toInt())
     }
 
     private fun waterfall(c: Canvas, p: DoubleArray) {
