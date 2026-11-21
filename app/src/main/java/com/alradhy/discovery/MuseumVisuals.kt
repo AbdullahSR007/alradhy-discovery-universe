@@ -64,7 +64,9 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         val now = SystemClock.uptimeMillis()
         if (running && lastFrame > 0) elapsed += (now - lastFrame).coerceIn(0, 40) / 1000.0 * speed
         lastFrame = now
-        canvas.drawColor(Color.rgb(11, 20, 37))
+        ink.style = Paint.Style.FILL
+        ink.color = 0xff0b1425.toInt()
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), ink)
         val saved = baseline
         val split = compare && saved != null
         val paneWidth = if (split) width / 2f else width.toFloat()
@@ -111,8 +113,8 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         if (tag.isNotEmpty()) {
             ink.style = Paint.Style.FILL
             ink.color = 0xee09111e.toInt()
-            c.drawRoundRect(22f, 334f, 220f, 388f, 12f, 12f, ink)
-            text(c, tag, 36f, 369f, 22f, 0xffe8eef9.toInt())
+            c.drawRoundRect(20f, 7f, 202f, 47f, 12f, 12f, ink)
+            text(c, tag, 34f, 36f, 20f, 0xffe8eef9.toInt())
         }
         c.restore()
     }
@@ -125,7 +127,7 @@ internal class ExperimentView(context: Context, val topic: Topic, private val ac
         fun y(v: Double) = (68 + 247 * (high - v) / (high - low)).toFloat()
         val threshold = y(p[8])
         line(c, 59f, threshold, 955f, threshold, 0xfffbbf24.toInt(), 2f)
-        text(c, "SENS  " + fmt(p[8], 0) + " dBm", 690f, threshold - 8, 20f, 0xfffbbf24.toInt())
+        text(c, "SENS  " + fmt(p[8], 0) + " dBm", 680f, 62f, 20f, 0xfffbbf24.toInt())
         stages.forEachIndexed { i, level ->
             val x = 52f + 131 * i
             val previous = if (i == 0) 0.0 else stages[i - 1]
