@@ -10,6 +10,7 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewOutlineProvider
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
@@ -108,6 +109,8 @@ internal class TvStyle(private val context: Context, private val store: Progress
     }
 
     fun scroll(child: View): ScrollView = ScrollView(context).apply {
+        outlineProvider = ViewOutlineProvider.BOUNDS
+        clipToOutline = true
         layoutDirection = View.LAYOUT_DIRECTION_RTL
         clipToPadding = false
         isFillViewport = false
